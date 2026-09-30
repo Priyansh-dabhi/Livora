@@ -18,6 +18,7 @@ export default function MainLayout() {
       <Stack.Screen name="home" />
       <Stack.Screen name="tasks" />
       <Stack.Screen name="task-confirmation" />
+      <Stack.Screen name="edit-profile" />
     </Stack>
   );
 }

@@ -112,7 +112,8 @@ const styles = StyleSheet.create({
     marginTop: spacing.xs,
   },
   rightAction: {
-    width: 44,
+    minWidth: 44,
     alignItems: 'flex-end',
+    justifyContent: 'center',
   },
 });

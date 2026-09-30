@@ -137,12 +137,13 @@ export default function HomeScreen() {
         </View>
 
         <TouchableOpacity
-          onPress={() => setShowAccountDetails(!showAccountDetails)}
-          style={styles.avatarButton}
+          onPress={() => router.push('/(main)/edit-profile')}
+          style={styles.personIconButton}
           accessibilityLabel="View profile and account settings"
           accessibilityRole="button"
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         >
-          <Text style={styles.avatarText}>{userInitials}</Text>
+          <Feather name="user" size={24} color={colors.textPrimary} />
         </TouchableOpacity>
       </View>
 
@@ -348,6 +349,16 @@ export default function HomeScreen() {
                   {profile?.address || 'Not provided'}
                 </Text>
               </View>
+
+              <TouchableOpacity
+                style={styles.editProfileButton}
+                onPress={() => router.push('/(main)/edit-profile')}
+                accessibilityRole="button"
+                accessibilityLabel="Edit profile"
+              >
+                <Feather name="edit-2" size={14} color={colors.primary} />
+                <Text style={styles.editProfileButtonText}>Edit Profile Details</Text>
+              </TouchableOpacity>
             </View>
           )}
 
@@ -395,6 +406,12 @@ const styles = StyleSheet.create({
     ...typography.h3,
     color: colors.primary,
     fontWeight: '700',
+  },
+  personIconButton: {
+    width: 44,
+    height: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   avatarButton: {
     width: 36,
@@ -633,6 +650,20 @@ const styles = StyleSheet.create({
   },
   accountAddressValue: {
     maxWidth: 200,
+  },
+  editProfileButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.xs,
+    paddingVertical: spacing.sm,
+    backgroundColor: colors.highlightMint,
+    borderRadius: radius.md,
+    marginTop: spacing.sm,
+  },
+  editProfileButtonText: {
+    ...typography.captionMedium,
+    color: colors.primary,
   },
   signOutButton: {
     marginTop: spacing.xs,

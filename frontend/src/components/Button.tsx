@@ -128,7 +128,7 @@ export function Button({
             style={[
               sizeStyle.text,
               variantStyle.text,
-              isDisabled && styles.disabledText,
+              isDisabled && (variant === 'primary' ? styles.disabledPrimaryText : styles.disabledText),
             ]}
           >
             {label}
@@ -162,6 +162,9 @@ const styles = StyleSheet.create({
   },
   disabledText: {
     color: colors.disabledText,
+  },
+  disabledPrimaryText: {
+    color: colors.white,
   },
   iconLeft: {
     marginRight: spacing.sm,

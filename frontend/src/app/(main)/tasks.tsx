@@ -45,6 +45,13 @@ import {
 import { getCategories, getTasks } from '@/services/mockTaskService';
 import type { Task, Category } from '@/types';
 
+function getTimeOfDayGreeting(): string {
+  const hour = new Date().getHours();
+  if (hour < 12) return 'Good morning';
+  if (hour < 17) return 'Good afternoon';
+  return 'Good evening';
+}
+
 export default function TasksScreen() {
   const router = useRouter();
   const dispatch = useAppDispatch();
@@ -58,6 +65,11 @@ export default function TasksScreen() {
     isLoading,
     error,
   } = useAppSelector((state) => state.tasks);
+
+  const profile = useAppSelector((state) => state.profile.profile);
+  const user = useAppSelector((state) => state.auth.user);
+  const greeting = getTimeOfDayGreeting();
+  const displayName = profile?.name?.split(' ')[0] || user?.email?.split('@')[0] || 'Priyansh';
 
   // 1. Fetch categories and tasks on initial load if not populated
   useEffect(() => {
@@ -162,14 +174,22 @@ export default function TasksScreen() {
         <SearchInput
           value={searchQuery}
           onChangeText={(text) => dispatch(setSearchQuery(text))}
-          placeholder="Search all services (e.g. cleaning, doctor)..."
+          placeholder="AC leaking, cook for weekends..."
         />
+      </View>
+
+      {/* Helpful Instructions */}
+      <View style={styles.instructionBanner}>
+        <Feather name="info" size={16} color={colors.primary} />
+        <Text style={styles.instructionText}>
+          Tap any service card to select it. When ready, tap Continue below to review and finalize.
+        </Text>
       </View>
 
       {/* Categories Horizontal Carousel */}
       <View style={styles.categorySection}>
         <View style={styles.sectionTitleRow}>
-          <Text style={styles.sectionTitle}>Browse Categories</Text>
+          <Text style={styles.sectionTitle}>POPULAR WITH FAMILIES LIKE YOURS</Text>
           {selectedCategoryId && !isSearchActive && (
             <TouchableOpacity
               onPress={() => dispatch(setSelectedCategory(null))}
@@ -263,13 +283,32 @@ export default function TasksScreen() {
   return (
     <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
       <Header
-        title="Livora Services"
+        title={`${greeting}, ${displayName}`}
+        showBack
+        onBack={() => {
+          if (router.canGoBack()) {
+            router.back();
+          } else {
+            router.push('/(main)/home');
+          }
+        }}
         rightAction={
-          selectedCount > 0 ? (
-            <View style={styles.selectedCountBadge}>
-              <Text style={styles.selectedCountBadgeText}>{selectedCount}</Text>
-            </View>
-          ) : undefined
+          <View style={styles.headerRightRow}>
+            {selectedCount > 0 && (
+              <View style={styles.selectedCountBadge}>
+                <Text style={styles.selectedCountBadgeText}>{selectedCount}</Text>
+              </View>
+            )}
+            <TouchableOpacity
+              onPress={() => router.push('/(main)/edit-profile')}
+              style={styles.personIconButton}
+              accessibilityLabel="View and edit profile"
+              accessibilityRole="button"
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <Feather name="user" size={24} color={colors.textPrimary} />
+            </TouchableOpacity>
+          </View>
         }
       />
 
@@ -418,5 +457,34 @@ const styles = StyleSheet.create({
     ...typography.micro,
     color: colors.white,
     fontWeight: '700',
+  },
+  headerRightRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  personIconButton: {
+    width: 36,
+    height: 36,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  instructionBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    backgroundColor: colors.highlightMint,
+    borderWidth: 1,
+    borderColor: colors.primaryLight,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.md,
+    marginBottom: spacing.lg,
+  },
+  instructionText: {
+    ...typography.caption,
+    color: colors.textPrimary,
+    flex: 1,
+    lineHeight: 18,
   },
 });

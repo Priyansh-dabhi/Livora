@@ -24,6 +24,7 @@ import {
   Badge,
   EmptyState,
   LoadingState,
+  Input,
 } from '@/components';
 import { colors, spacing, typography, radius } from '@/theme';
 import {
@@ -42,6 +43,13 @@ import {
 import { saveSelectedTaskIds } from '@/utils/storage';
 import type { Task } from '@/types';
 
+const TIMING_OPTIONS = [
+  { id: 'standard', title: 'Standard', desc: '2-3 days', icon: 'calendar' },
+  { id: 'same_day', title: 'Same Day', desc: 'Delivered today', icon: 'zap' },
+  { id: 'express', title: 'Express', desc: '2-4 hrs', icon: 'clock' },
+  { id: 'scheduled', title: 'Scheduled', desc: 'Pick your slot', icon: 'check-square' },
+] as const;
+
 export default function TaskConfirmationScreen() {
   const router = useRouter();
   const dispatch = useAppDispatch();
@@ -52,6 +60,8 @@ export default function TaskConfirmationScreen() {
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [selectedTiming, setSelectedTiming] = useState<string>('standard');
+  const [specialNotes, setSpecialNotes] = useState<string>('');
 
   // Fetch categories and tasks if not already loaded in Redux
   useEffect(() => {
@@ -172,6 +182,71 @@ export default function TaskConfirmationScreen() {
     </View>
   );
 
+  const renderFooter = () => {
+    if (selectedTasks.length === 0) return null;
+
+    return (
+      <View style={styles.footerContainer}>
+        {/* Section: When do you need this? */}
+        <Text style={styles.sectionHeader}>When do you need these services?</Text>
+        <View style={styles.timingGrid}>
+          {TIMING_OPTIONS.map((opt) => {
+            const isSelected = selectedTiming === opt.id;
+            return (
+              <TouchableOpacity
+                key={opt.id}
+                style={[
+                  styles.timingCard,
+                  isSelected && styles.timingCardSelected,
+                ]}
+                onPress={() => setSelectedTiming(opt.id)}
+                activeOpacity={0.7}
+                accessibilityRole="radio"
+                accessibilityState={{ selected: isSelected }}
+                accessibilityLabel={`${opt.title}, ${opt.desc}`}
+              >
+                <View
+                  style={[
+                    styles.timingIconWrapper,
+                    isSelected && styles.timingIconWrapperSelected,
+                  ]}
+                >
+                  <Feather
+                    name={opt.icon as keyof typeof Feather.glyphMap}
+                    size={16}
+                    color={isSelected ? colors.primary : colors.textSecondary}
+                  />
+                </View>
+                <Text
+                  style={[
+                    styles.timingTitle,
+                    isSelected && styles.timingTitleSelected,
+                  ]}
+                >
+                  {opt.title}
+                </Text>
+                <Text style={styles.timingDesc}>{opt.desc}</Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+
+        {/* Section: Tell us a little more */}
+        <Text style={[styles.sectionHeader, { marginTop: spacing.lg }]}>
+          Tell us a little more (Optional)
+        </Text>
+        <Input
+          placeholder="Any special instructions or preferences for your concierge..."
+          value={specialNotes}
+          onChangeText={setSpecialNotes}
+          multiline
+          numberOfLines={3}
+          leftIcon="message-square"
+        />
+      </View>
+    );
+  };
+
   return (
     <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
       <Header
@@ -179,12 +254,24 @@ export default function TaskConfirmationScreen() {
         subtitle="Step 2 of 2"
         showBack
         onBack={() => router.back()}
+        rightAction={
+          <TouchableOpacity
+            onPress={() => router.push('/(main)/edit-profile')}
+            style={styles.personIconButton}
+            accessibilityLabel="View profile and account"
+            accessibilityRole="button"
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <Feather name="user" size={24} color={colors.textPrimary} />
+          </TouchableOpacity>
+        }
       />
 
       <FlatList
         data={selectedTasks}
         keyExtractor={(item) => item.id}
         ListHeaderComponent={renderHeader}
+        ListFooterComponent={renderFooter}
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
         renderItem={({ item }: { item: Task }) => {
@@ -365,5 +452,61 @@ const styles = StyleSheet.create({
     ...typography.caption,
     color: colors.textSecondary,
     lineHeight: 18,
+  },
+  footerContainer: {
+    marginTop: spacing.lg,
+    paddingTop: spacing.lg,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  timingGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+    marginTop: spacing.sm,
+  },
+  timingCard: {
+    width: '48%',
+    backgroundColor: colors.surface,
+    borderWidth: 1.5,
+    borderColor: colors.border,
+    borderRadius: radius.md,
+    padding: spacing.md,
+  },
+  timingCardSelected: {
+    borderColor: colors.primary,
+    backgroundColor: colors.highlightMint,
+  },
+  timingIconWrapper: {
+    width: 32,
+    height: 32,
+    borderRadius: radius.sm,
+    backgroundColor: colors.surfaceElevated,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.xs,
+  },
+  timingIconWrapperSelected: {
+    backgroundColor: colors.white,
+  },
+  timingTitle: {
+    ...typography.captionMedium,
+    color: colors.textPrimary,
+  },
+  timingTitleSelected: {
+    color: colors.primary,
+    fontWeight: '700',
+  },
+  timingDesc: {
+    ...typography.micro,
+    color: colors.textSecondary,
+    marginTop: 2,
+  },
+  personIconButton: {
+    width: 44,
+    height: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: -spacing.sm,
   },
 });
