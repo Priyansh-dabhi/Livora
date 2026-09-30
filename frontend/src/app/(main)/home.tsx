@@ -12,7 +12,6 @@ import {
   ScrollView,
   TouchableOpacity,
   StyleSheet,
-  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -27,15 +26,11 @@ import { colors, spacing, typography, radius, shadows } from '@/theme';
 import {
   useAppDispatch,
   useAppSelector,
-  logout,
-  clearTasksState,
-  clearProfile,
   setCategories,
   setTasks,
   setSelectedCategory,
 } from '@/store';
 import { getCategories, getTasks } from '@/services/mockTaskService';
-import { clearSession } from '@/utils/storage';
 import type { Task, Category } from '@/types';
 
 function getTimeOfDayGreeting(): string {
@@ -54,8 +49,6 @@ export default function HomeScreen() {
   const { categories, tasks, selectedTaskIds } = useAppSelector(
     (state) => state.tasks,
   );
-
-  const [showAccountDetails, setShowAccountDetails] = useState(false);
 
   // Fetch categories and tasks if not already populated in Redux
   useEffect(() => {
@@ -90,39 +83,10 @@ export default function HomeScreen() {
 
   const greeting = getTimeOfDayGreeting();
   const displayName = profile?.name || user?.email?.split('@')[0] || 'Friend';
-  const userInitials = profile?.name
-    ? profile.name
-        .split(' ')
-        .map((n) => n[0])
-        .slice(0, 2)
-        .join('')
-        .toUpperCase()
-    : 'U';
 
   const handleCategoryPress = (categoryId: string) => {
     dispatch(setSelectedCategory(categoryId));
     router.push('/(main)/tasks');
-  };
-
-  const handleSignOut = () => {
-    Alert.alert(
-      'Sign Out',
-      'Are you sure you want to sign out from your Livora account?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Sign Out',
-          style: 'destructive',
-          onPress: async () => {
-            await clearSession();
-            dispatch(logout());
-            dispatch(clearProfile());
-            dispatch(clearTasksState());
-            router.replace('/(auth)/login');
-          },
-        },
-      ],
-    );
   };
 
   return (
@@ -137,7 +101,7 @@ export default function HomeScreen() {
         </View>
 
         <TouchableOpacity
-          onPress={() => router.push('/(main)/edit-profile')}
+          onPress={() => router.push('/(main)/profile')}
           style={styles.personIconButton}
           accessibilityLabel="View profile and account settings"
           accessibilityRole="button"
@@ -287,89 +251,6 @@ export default function HomeScreen() {
               </TouchableOpacity>
             ))}
           </ScrollView>
-        </View>
-
-        {/* Account Details / Sign Out Section */}
-        <View style={styles.accountSection}>
-          <TouchableOpacity
-            style={styles.accountHeaderRow}
-            onPress={() => setShowAccountDetails(!showAccountDetails)}
-            activeOpacity={0.7}
-          >
-            <View style={styles.accountHeaderLeft}>
-              <Feather name="user" size={18} color={colors.textPrimary} />
-              <Text style={styles.sectionHeading}>Account & Profile</Text>
-            </View>
-            <Feather
-              name={showAccountDetails ? 'chevron-up' : 'chevron-down'}
-              size={18}
-              color={colors.textSecondary}
-            />
-          </TouchableOpacity>
-
-          {showAccountDetails && (
-            <View style={styles.accountCard}>
-              <View style={styles.accountFieldRow}>
-                <Text style={styles.accountLabel}>Full Name</Text>
-                <Text style={styles.accountValue}>
-                  {profile?.name || 'Not provided'}
-                </Text>
-              </View>
-
-              <View style={styles.accountFieldRow}>
-                <Text style={styles.accountLabel}>Email</Text>
-                <Text style={styles.accountValue}>
-                  {user?.email || 'test@livora.com'}
-                </Text>
-              </View>
-
-              <View style={styles.accountFieldRow}>
-                <Text style={styles.accountLabel}>Mobile</Text>
-                <Text style={styles.accountValue}>
-                  {profile?.mobileNumber
-                    ? `+91 ${profile.mobileNumber}`
-                    : 'Not provided'}
-                </Text>
-              </View>
-
-              {profile?.businessName && (
-                <View style={styles.accountFieldRow}>
-                  <Text style={styles.accountLabel}>Business</Text>
-                  <Text style={styles.accountValue}>
-                    {profile.businessName}
-                  </Text>
-                </View>
-              )}
-
-              <View style={styles.accountFieldRow}>
-                <Text style={styles.accountLabel}>Address</Text>
-                <Text
-                  style={[styles.accountValue, styles.accountAddressValue]}
-                >
-                  {profile?.address || 'Not provided'}
-                </Text>
-              </View>
-
-              <TouchableOpacity
-                style={styles.editProfileButton}
-                onPress={() => router.push('/(main)/edit-profile')}
-                accessibilityRole="button"
-                accessibilityLabel="Edit profile"
-              >
-                <Feather name="edit-2" size={14} color={colors.primary} />
-                <Text style={styles.editProfileButtonText}>Edit Profile Details</Text>
-              </TouchableOpacity>
-            </View>
-          )}
-
-          <Button
-            label="Sign Out"
-            variant="outline"
-            onPress={handleSignOut}
-            icon="log-out"
-            fullWidth
-            style={styles.signOutButton}
-          />
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -605,67 +486,5 @@ const styles = StyleSheet.create({
   categoryChipText: {
     ...typography.captionMedium,
     color: colors.textPrimary,
-  },
-  accountSection: {
-    marginTop: spacing.md,
-    paddingTop: spacing.lg,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-  },
-  accountHeaderRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: spacing.md,
-  },
-  accountHeaderLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-  },
-  accountCard: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-    padding: spacing.lg,
-    marginBottom: spacing.lg,
-    gap: spacing.sm,
-  },
-  accountFieldRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-  },
-  accountLabel: {
-    ...typography.captionMedium,
-    color: colors.textSecondary,
-    width: 80,
-  },
-  accountValue: {
-    ...typography.caption,
-    color: colors.textPrimary,
-    flex: 1,
-    textAlign: 'right',
-  },
-  accountAddressValue: {
-    maxWidth: 200,
-  },
-  editProfileButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.xs,
-    paddingVertical: spacing.sm,
-    backgroundColor: colors.highlightMint,
-    borderRadius: radius.md,
-    marginTop: spacing.sm,
-  },
-  editProfileButtonText: {
-    ...typography.captionMedium,
-    color: colors.primary,
-  },
-  signOutButton: {
-    marginTop: spacing.xs,
   },
 });

@@ -300,7 +300,7 @@ export default function TasksScreen() {
               </View>
             )}
             <TouchableOpacity
-              onPress={() => router.push('/(main)/edit-profile')}
+              onPress={() => router.push('/(main)/profile')}
               style={styles.personIconButton}
               accessibilityLabel="View and edit profile"
               accessibilityRole="button"

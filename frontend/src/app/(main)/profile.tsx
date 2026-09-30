@@ -1,19 +1,19 @@
 /**
- * Edit Profile & Account Screen
+ * Livora Profile & Account Screen
  *
- * Displays user's Lifestyle Manager details, household configuration,
- * wallet status, editable personal details, and a prominent Sign Out action,
- * styled to match the Livora reference design system.
+ * Comprehensive profile dashboard displaying all user account details
+ * (Full Name, Email, Mobile, Address, Business), Lifestyle Manager concierge status,
+ * household management, wallet status, inline profile editing capabilities,
+ * and session sign out.
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
   TouchableOpacity,
   StyleSheet,
   Alert,
-  ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -23,9 +23,10 @@ import {
   Input,
   Button,
   Header,
+  Badge,
   KeyboardAwareWrapper,
 } from '@/components';
-import { colors, spacing, typography, radius } from '@/theme';
+import { colors, spacing, typography, radius, shadows } from '@/theme';
 import { useFormField } from '@/hooks';
 import {
   isValidName,
@@ -44,7 +45,7 @@ import {
 import { saveProfile as mockSaveProfile } from '@/services/mockProfileService';
 import { saveProfileData, clearSession } from '@/utils/storage';
 
-export default function EditProfileScreen() {
+export default function ProfileScreen() {
   const router = useRouter();
   const dispatch = useAppDispatch();
   const currentProfile = useAppSelector((state) => state.profile.profile);
@@ -64,7 +65,7 @@ export default function EditProfileScreen() {
   });
 
   const mobileField = useFormField({
-    initialValue: currentProfile?.mobileNumber || '',
+    initialValue: currentProfile?.mobileNumber || '9313975796',
     validate: (val) => {
       const cleaned = val.replace(/\s/g, '');
       if (!cleaned) return 'Mobile number is required';
@@ -78,7 +79,7 @@ export default function EditProfileScreen() {
   const addressField = useFormField({
     initialValue:
       currentProfile?.address ||
-      'Chhani Road, Vadodara\nSociety: Omkara Residency\nFlat / unit: D-301',
+      'Omkara Residency, Chhani Road, Vadodara',
     validate: (val) => {
       if (!val.trim()) return 'Address is required';
       if (!isValidAddress(val)) {
@@ -91,6 +92,16 @@ export default function EditProfileScreen() {
   const businessField = useFormField({
     initialValue: currentProfile?.businessName || '',
   });
+
+  // Keep form values synchronized if currentProfile updates
+  useEffect(() => {
+    if (currentProfile) {
+      if (currentProfile.name) nameField.setValue(currentProfile.name);
+      if (currentProfile.mobileNumber) mobileField.setValue(currentProfile.mobileNumber);
+      if (currentProfile.address) addressField.setValue(currentProfile.address);
+      if (currentProfile.businessName) businessField.setValue(currentProfile.businessName);
+    }
+  }, [currentProfile]);
 
   const handleSave = async () => {
     setFormError(null);
@@ -151,10 +162,26 @@ export default function EditProfileScreen() {
     );
   };
 
+  const displayName = currentProfile?.name || nameField.value || 'Priyansh Dabhi';
+  const displayEmail = user?.email || 'test@livora.com';
+  const displayMobile = currentProfile?.mobileNumber || mobileField.value || '9313975796';
+  const displayAddress =
+    currentProfile?.address ||
+    addressField.value ||
+    'Omkara Residency, Chhani Road, Vadodara';
+  const displayBusiness = currentProfile?.businessName || businessField.value;
+
+  const initials = displayName
+    .split(' ')
+    .map((n) => n[0])
+    .slice(0, 2)
+    .join('')
+    .toUpperCase();
+
   return (
     <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
       <Header
-        title="Account"
+        title="Profile & Account"
         showBack
         onBack={() => {
           if (router.canGoBack()) {
@@ -166,10 +193,19 @@ export default function EditProfileScreen() {
       />
 
       <KeyboardAwareWrapper contentContainerStyle={styles.container}>
-        {/* Card 1: Your LM */}
-        <View style={styles.card}>
-          <View style={styles.cardHeaderRow}>
-            <Text style={styles.cardLabel}>Your LM</Text>
+        {/* User Account Overview Card */}
+        <View style={styles.profileOverviewCard}>
+          <View style={styles.overviewTopRow}>
+            <View style={styles.avatarCircle}>
+              <Text style={styles.avatarText}>{initials || 'U'}</Text>
+            </View>
+            <View style={styles.overviewInfo}>
+              <Text style={styles.overviewName}>{displayName}</Text>
+              <Text style={styles.overviewEmail}>{displayEmail}</Text>
+              <View style={styles.badgeWrapper}>
+                <Badge label="Active Member" variant="primary" />
+              </View>
+            </View>
             <TouchableOpacity
               onPress={() => setIsEditing(!isEditing)}
               style={styles.editToggleBtn}
@@ -183,74 +219,61 @@ export default function EditProfileScreen() {
                 color={colors.primary}
               />
               <Text style={styles.editToggleText}>
-                {isEditing ? 'Cancel' : 'Edit Profile'}
+                {isEditing ? 'Close' : 'Edit'}
               </Text>
             </TouchableOpacity>
           </View>
 
-          <Text style={styles.cardTitle}>Pilot LM</Text>
-          <Text style={styles.cardCity}>Mumbai</Text>
+          {/* Account Detail Fields */}
+          <View style={styles.detailsDivider} />
 
-          <View style={styles.divider} />
+          <View style={styles.detailRow}>
+            <Text style={styles.detailLabel}>Full Name</Text>
+            <Text style={styles.detailValue}>{displayName}</Text>
+          </View>
 
-          <Text style={styles.cardUserName}>
-            {currentProfile?.name || 'Priyansh Dabhi'}
-          </Text>
-          <Text style={styles.cardUserAddress}>
-            {currentProfile?.address ||
-              'Chhani Road, Vadodara\nSociety: Omkara Residency\nFlat / unit: D-301'}
-          </Text>
+          <View style={styles.detailRow}>
+            <Text style={styles.detailLabel}>Email</Text>
+            <Text style={styles.detailValue}>{displayEmail}</Text>
+          </View>
 
-          {currentProfile?.businessName ? (
-            <Text style={styles.cardUserBusiness}>
-              {currentProfile.businessName}
-            </Text>
+          <View style={styles.detailRow}>
+            <Text style={styles.detailLabel}>Mobile</Text>
+            <Text style={styles.detailValue}>+91 {displayMobile}</Text>
+          </View>
+
+          {displayBusiness ? (
+            <View style={styles.detailRow}>
+              <Text style={styles.detailLabel}>Business</Text>
+              <Text style={styles.detailValue}>{displayBusiness}</Text>
+            </View>
           ) : null}
-        </View>
 
-        {/* Card 2: Household */}
-        <TouchableOpacity
-          style={styles.householdCard}
-          onPress={() =>
-            Alert.alert(
-              'Household',
-              'Family members your Lifestyle Manager should know about. Contact your LM to add or update family members.',
-              [{ text: 'OK' }],
-            )
-          }
-          activeOpacity={0.7}
-          accessibilityRole="button"
-          accessibilityLabel="Household family members"
-        >
-          <View style={styles.householdIconWrapper}>
-            <Feather name="users" size={20} color={colors.primary} />
-          </View>
-          <View style={styles.householdTextWrapper}>
-            <Text style={styles.householdTitle}>Household</Text>
-            <Text style={styles.householdSubtitle}>
-              Family members your LM should know about
+          <View style={styles.detailRow}>
+            <Text style={styles.detailLabel}>Address</Text>
+            <Text style={[styles.detailValue, styles.detailAddress]}>
+              {displayAddress}
             </Text>
           </View>
-          <Feather name="chevron-right" size={20} color={colors.textSecondary} />
-        </TouchableOpacity>
-
-        {/* Card 3: Wallet */}
-        <View style={styles.card}>
-          <Text style={styles.cardLabel}>Wallet</Text>
-          <Text style={styles.cardTitle}>Coming soon</Text>
-          <Text style={styles.walletDescription}>
-            Wallet top-up isn't turned on yet. Your Lifestyle Manager can still handle
-            requests and send you the bill directly in the meantime.
-          </Text>
         </View>
 
-        {/* Edit Form (Expanded when user taps Edit Profile) */}
+        {/* Edit Form (Expanded when user taps Edit) */}
         {isEditing && (
           <View style={styles.editCard}>
-            <Text style={styles.editCardTitle}>Edit Profile Information</Text>
-            <Text style={styles.editCardSubtitle}>
-              Update your contact info and delivery address for your Lifestyle Manager.
-            </Text>
+            <View style={styles.editCardHeaderRow}>
+              <View>
+                <Text style={styles.editCardTitle}>Update Profile Details</Text>
+                <Text style={styles.editCardSubtitle}>
+                  Make changes below and tap Save Changes.
+                </Text>
+              </View>
+              <TouchableOpacity
+                onPress={() => setIsEditing(false)}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
+                <Feather name="x-circle" size={20} color={colors.textSecondary} />
+              </TouchableOpacity>
+            </View>
 
             {formError && (
               <View style={styles.errorBanner}>
@@ -310,18 +333,72 @@ export default function EditProfileScreen() {
               onSubmitEditing={handleSave}
             />
 
-            <Button
-              label="Save Changes"
-              onPress={handleSave}
-              loading={isLoading}
-              fullWidth
-              size="md"
-              icon="check"
-              iconPosition="right"
-              style={styles.saveBtn}
-            />
+            <View style={styles.editActionRow}>
+              <Button
+                label="Cancel"
+                variant="outline"
+                onPress={() => setIsEditing(false)}
+                style={styles.cancelBtn}
+              />
+              <Button
+                label="Save Changes"
+                onPress={handleSave}
+                loading={isLoading}
+                icon="check"
+                iconPosition="right"
+                style={styles.saveBtn}
+              />
+            </View>
           </View>
         )}
+
+        {/* Card: Your LM (Pilot LM, Mumbai) */}
+        <View style={styles.card}>
+          <Text style={styles.cardLabel}>Your LM</Text>
+          <Text style={styles.cardTitle}>Pilot LM</Text>
+          <Text style={styles.cardCity}>Mumbai</Text>
+
+          <View style={styles.divider} />
+
+          <Text style={styles.cardUserName}>{displayName}</Text>
+          <Text style={styles.cardUserAddress}>{displayAddress}</Text>
+        </View>
+
+        {/* Card: Household */}
+        <TouchableOpacity
+          style={styles.householdCard}
+          onPress={() =>
+            Alert.alert(
+              'Household Members',
+              'Your Lifestyle Manager coordinates care for everyone in your household. Contact your LM to add or update family members.',
+              [{ text: 'OK' }],
+            )
+          }
+          activeOpacity={0.7}
+          accessibilityRole="button"
+          accessibilityLabel="Household family members"
+        >
+          <View style={styles.householdIconWrapper}>
+            <Feather name="users" size={20} color={colors.primary} />
+          </View>
+          <View style={styles.householdTextWrapper}>
+            <Text style={styles.householdTitle}>Household</Text>
+            <Text style={styles.householdSubtitle}>
+              Family members your LM should know about
+            </Text>
+          </View>
+          <Feather name="chevron-right" size={20} color={colors.textSecondary} />
+        </TouchableOpacity>
+
+        {/* Card: Wallet */}
+        <View style={styles.card}>
+          <Text style={styles.cardLabel}>Wallet</Text>
+          <Text style={styles.cardTitle}>Coming soon</Text>
+          <Text style={styles.walletDescription}>
+            Wallet top-up isn't turned on yet. Your Lifestyle Manager can still handle
+            requests and send you the bill directly in the meantime.
+          </Text>
+        </View>
 
         {/* Prominent Red Outline Sign Out Button */}
         <TouchableOpacity
@@ -349,6 +426,137 @@ const styles = StyleSheet.create({
     paddingTop: spacing.xs,
     paddingBottom: spacing.xxxl,
   },
+  profileOverviewCard: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: spacing.lg,
+    marginBottom: spacing.md,
+  },
+  overviewTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+  },
+  avatarCircle: {
+    width: 48,
+    height: 48,
+    borderRadius: radius.pill,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  avatarText: {
+    ...typography.bodyMedium,
+    color: colors.white,
+    fontWeight: '700',
+    fontSize: 18,
+  },
+  overviewInfo: {
+    flex: 1,
+  },
+  overviewName: {
+    ...typography.h4,
+    color: colors.textPrimary,
+  },
+  overviewEmail: {
+    ...typography.caption,
+    color: colors.textSecondary,
+    marginTop: 1,
+  },
+  badgeWrapper: {
+    alignSelf: 'flex-start',
+    marginTop: spacing.xs,
+  },
+  editToggleBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 6,
+    borderRadius: radius.sm,
+    backgroundColor: colors.highlightMint,
+  },
+  editToggleText: {
+    ...typography.captionMedium,
+    color: colors.primary,
+    fontWeight: '600',
+  },
+  detailsDivider: {
+    height: 1,
+    backgroundColor: colors.border,
+    marginVertical: spacing.md,
+  },
+  detailRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    paddingVertical: 4,
+  },
+  detailLabel: {
+    ...typography.captionMedium,
+    color: colors.textSecondary,
+    width: 90,
+  },
+  detailValue: {
+    ...typography.caption,
+    color: colors.textPrimary,
+    flex: 1,
+    textAlign: 'right',
+  },
+  detailAddress: {
+    lineHeight: 18,
+  },
+  editCard: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: spacing.lg,
+    marginBottom: spacing.md,
+  },
+  editCardHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: spacing.md,
+  },
+  editCardTitle: {
+    ...typography.bodyMedium,
+    fontWeight: '700',
+    color: colors.textPrimary,
+    marginBottom: 2,
+  },
+  editCardSubtitle: {
+    ...typography.caption,
+    color: colors.textSecondary,
+  },
+  errorBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.errorLight,
+    padding: spacing.md,
+    borderRadius: radius.md,
+    marginBottom: spacing.md,
+    gap: spacing.sm,
+  },
+  errorText: {
+    ...typography.caption,
+    color: colors.error,
+    flex: 1,
+  },
+  editActionRow: {
+    flexDirection: 'row',
+    gap: spacing.md,
+    marginTop: spacing.sm,
+  },
+  cancelBtn: {
+    flex: 1,
+  },
+  saveBtn: {
+    flex: 1.5,
+  },
   card: {
     backgroundColor: colors.surface,
     borderRadius: radius.lg,
@@ -357,30 +565,10 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
     marginBottom: spacing.md,
   },
-  cardHeaderRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: spacing.xs,
-  },
   cardLabel: {
     ...typography.caption,
     color: colors.textSecondary,
     fontWeight: '500',
-  },
-  editToggleBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 4,
-    borderRadius: radius.sm,
-    backgroundColor: colors.highlightMint,
-  },
-  editToggleText: {
-    ...typography.captionMedium,
-    color: colors.primary,
-    fontWeight: '600',
   },
   cardTitle: {
     ...typography.h3,
@@ -408,11 +596,6 @@ const styles = StyleSheet.create({
     ...typography.caption,
     color: colors.textSecondary,
     lineHeight: 20,
-  },
-  cardUserBusiness: {
-    ...typography.captionMedium,
-    color: colors.primary,
-    marginTop: spacing.xs,
   },
   householdCard: {
     flexDirection: 'row',
@@ -451,42 +634,6 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     lineHeight: 20,
     marginTop: spacing.xs,
-  },
-  editCard: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
-    padding: spacing.lg,
-    marginBottom: spacing.md,
-  },
-  editCardTitle: {
-    ...typography.bodyMedium,
-    fontWeight: '700',
-    color: colors.textPrimary,
-    marginBottom: 2,
-  },
-  editCardSubtitle: {
-    ...typography.caption,
-    color: colors.textSecondary,
-    marginBottom: spacing.md,
-  },
-  errorBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.errorLight,
-    padding: spacing.md,
-    borderRadius: radius.md,
-    marginBottom: spacing.md,
-    gap: spacing.sm,
-  },
-  errorText: {
-    ...typography.caption,
-    color: colors.error,
-    flex: 1,
-  },
-  saveBtn: {
-    marginTop: spacing.sm,
   },
   signOutButton: {
     flexDirection: 'row',
