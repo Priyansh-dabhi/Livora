@@ -1,35 +1,30 @@
 /**
- * Task Discovery & Selection Screen
+ * Services / Task Discovery Screen (PadosiPro Replica)
  *
- * Allows users to browse categories, search across services,
- * multi-select tasks, and proceed to confirmation.
+ * Faithfully reproduces the "What do you need help with?" screen:
+ * - "< Back" green navigation link
+ * - "What do you need help with?" headline
+ * - "Pick a category, then choose a service. You can add details next." subtitle
+ * - Accordion category cards with golden-yellow accent stripe when expanded
+ * - Category sub-service pills ("WHAT KIND OF HELP?")
+ * - Sticky dark green "Continue" CTA button
  */
 
-import React, { useEffect, useMemo, useCallback } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import {
   View,
   Text,
-  FlatList,
   ScrollView,
   TouchableOpacity,
   StyleSheet,
+  Platform,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 
-import {
-  Header,
-  SearchInput,
-  CategoryCard,
-  TaskCard,
-  BottomAction,
-  Button,
-  EmptyState,
-  LoadingState,
-  ErrorState,
-} from '@/components';
-import { colors, spacing, typography, radius } from '@/theme';
+import { colors, spacing, radius, shadows } from '@/theme';
 import {
   useAppDispatch,
   useAppSelector,
@@ -38,19 +33,10 @@ import {
   setSelectedCategory,
   toggleTaskSelection,
   clearSelections,
-  setSearchQuery,
   setTasksLoading,
-  setTasksError,
 } from '@/store';
 import { getCategories, getTasks } from '@/services/mockTaskService';
 import type { Task, Category } from '@/types';
-
-function getTimeOfDayGreeting(): string {
-  const hour = new Date().getHours();
-  if (hour < 12) return 'Good morning';
-  if (hour < 17) return 'Good afternoon';
-  return 'Good evening';
-}
 
 export default function TasksScreen() {
   const router = useRouter();
@@ -61,21 +47,18 @@ export default function TasksScreen() {
     tasks,
     selectedCategoryId,
     selectedTaskIds,
-    searchQuery,
     isLoading,
-    error,
   } = useAppSelector((state) => state.tasks);
 
-  const profile = useAppSelector((state) => state.profile.profile);
-  const user = useAppSelector((state) => state.auth.user);
-  const greeting = getTimeOfDayGreeting();
-  const displayName = profile?.name?.split(' ')[0] || user?.email?.split('@')[0] || 'Priyansh';
+  // Active accordion expanded category ID (defaults to selectedCategoryId or 'cat-errands')
+  const [expandedCategoryId, setExpandedCategoryId] = useState<string>(
+    selectedCategoryId || 'cat-errands'
+  );
 
-  // 1. Fetch categories and tasks on initial load if not populated
+  // Load categories and tasks if not yet loaded
   useEffect(() => {
     async function loadData() {
       if (categories.length > 0 && tasks.length > 0) return;
-
       dispatch(setTasksLoading(true));
       try {
         const [cats, taskList] = await Promise.all([
@@ -84,292 +67,200 @@ export default function TasksScreen() {
         ]);
         dispatch(setCategories(cats));
         dispatch(setTasks(taskList));
-      } catch (err: unknown) {
-        const message =
-          err instanceof Error ? err.message : 'Failed to load services';
-        dispatch(setTasksError(message));
+      } catch (err) {
+        console.warn('Failed to load services data:', err);
       } finally {
         dispatch(setTasksLoading(false));
       }
     }
-
     loadData();
   }, [categories.length, tasks.length, dispatch]);
 
-  // 2. Map category IDs to category names for fast badge lookups
-  const categoryMap = useMemo(() => {
-    const map = new Map<string, string>();
-    categories.forEach((c) => map.set(c.id, c.name));
-    return map;
-  }, [categories]);
-
-  // 3. Filter tasks by search query (global) or selected category
-  const filteredTasks = useMemo(() => {
-    const query = searchQuery.trim().toLowerCase();
-
-    if (query.length > 0) {
-      // Global search across all categories
-      return tasks.filter(
-        (t) =>
-          t.name.toLowerCase().includes(query) ||
-          t.description.toLowerCase().includes(query) ||
-          (categoryMap.get(t.categoryId)?.toLowerCase().includes(query) ?? false),
-      );
-    }
-
+  // Keep expanded category in sync with Redux if set externally
+  useEffect(() => {
     if (selectedCategoryId) {
-      return tasks.filter((t) => t.categoryId === selectedCategoryId);
+      setExpandedCategoryId(selectedCategoryId);
     }
+  }, [selectedCategoryId]);
 
-    // Default: show all tasks
-    return tasks;
-  }, [tasks, searchQuery, selectedCategoryId, categoryMap]);
+  // Toggle category accordion
+  const handleToggleCategory = (catId: string) => {
+    if (expandedCategoryId === catId) {
+      // Toggle close or keep open
+      setExpandedCategoryId(catId);
+    } else {
+      setExpandedCategoryId(catId);
+      dispatch(setSelectedCategory(catId));
+    }
+  };
 
-  // 4. Handlers
-  const handleCategoryPress = useCallback(
-    (catId: string) => {
-      // Toggle category selection: if already selected, clear to show all
-      if (selectedCategoryId === catId) {
-        dispatch(setSelectedCategory(null));
-      } else {
-        dispatch(setSelectedCategory(catId));
+  // Toggle subservice pill selection
+  const handleToggleService = (taskId: string) => {
+    dispatch(toggleTaskSelection(taskId));
+  };
+
+  // Proceed to confirmation screen
+  const handleContinue = () => {
+    if (selectedTaskIds.length === 0) {
+      // If nothing selected yet, select the first task of the current expanded category
+      const currentTasks = tasks.filter((t) => t.categoryId === expandedCategoryId);
+      if (currentTasks.length > 0) {
+        dispatch(toggleTaskSelection(currentTasks[0].id));
       }
-    },
-    [selectedCategoryId, dispatch],
-  );
-
-  const handleTaskToggle = useCallback(
-    (taskId: string) => {
-      dispatch(toggleTaskSelection(taskId));
-    },
-    [dispatch],
-  );
-
-  const handleClearSearch = useCallback(() => {
-    dispatch(setSearchQuery(''));
-  }, [dispatch]);
-
-  const handleProceed = useCallback(() => {
-    if (selectedTaskIds.length === 0) return;
+    }
     router.push('/(main)/task-confirmation');
-  }, [selectedTaskIds.length, router]);
-
-  const selectedCount = selectedTaskIds.length;
-  const isSearchActive = searchQuery.trim().length > 0;
-  const activeCategory = categories.find((c) => c.id === selectedCategoryId);
-
-  // 5. Header Component for FlatList
-  const renderHeader = () => (
-    <View style={styles.listHeader}>
-      {/* Intro text */}
-      <View style={styles.introSection}>
-        <Text style={styles.headline}>What do you need help with?</Text>
-        <Text style={styles.subtitle}>
-          Select one or more services to build your customized lifestyle package.
-        </Text>
-      </View>
-
-      {/* Search Input */}
-      <View style={styles.searchSection}>
-        <SearchInput
-          value={searchQuery}
-          onChangeText={(text) => dispatch(setSearchQuery(text))}
-          placeholder="AC leaking, cook for weekends..."
-        />
-      </View>
-
-      {/* Helpful Instructions */}
-      <View style={styles.instructionBanner}>
-        <Feather name="info" size={16} color={colors.primary} />
-        <Text style={styles.instructionText}>
-          Tap any service card to select it. When ready, tap Continue below to review and finalize.
-        </Text>
-      </View>
-
-      {/* Categories Horizontal Carousel */}
-      <View style={styles.categorySection}>
-        <View style={styles.sectionTitleRow}>
-          <Text style={styles.sectionTitle}>POPULAR WITH FAMILIES LIKE YOURS</Text>
-          {selectedCategoryId && !isSearchActive && (
-            <TouchableOpacity
-              onPress={() => dispatch(setSelectedCategory(null))}
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-            >
-              <Text style={styles.clearFilterText}>Show All</Text>
-            </TouchableOpacity>
-          )}
-        </View>
-
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.categoryScroll}
-        >
-          {categories.map((category) => {
-            const isSelected = selectedCategoryId === category.id && !isSearchActive;
-            return (
-              <View key={category.id} style={styles.categoryCardWrapper}>
-                <CategoryCard
-                  name={category.name}
-                  icon={category.icon as keyof typeof Feather.glyphMap}
-                  taskCount={category.taskCount}
-                  selected={isSelected}
-                  onPress={() => handleCategoryPress(category.id)}
-                />
-              </View>
-            );
-          })}
-        </ScrollView>
-      </View>
-
-      {/* Active Filter Title */}
-      <View style={styles.filterStatusRow}>
-        <Text style={styles.taskSectionTitle}>
-          {isSearchActive
-            ? `Search Results (${filteredTasks.length})`
-            : activeCategory
-            ? `${activeCategory.name} (${filteredTasks.length})`
-            : `All Services (${filteredTasks.length})`}
-        </Text>
-
-        {selectedCount > 0 && (
-          <TouchableOpacity
-            onPress={() => dispatch(clearSelections())}
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-          >
-            <Text style={styles.clearSelectionsText}>Clear selection</Text>
-          </TouchableOpacity>
-        )}
-      </View>
-    </View>
-  );
-
-  // 6. Loading and Error Guards
-  if (isLoading && tasks.length === 0) {
-    return (
-      <SafeAreaView style={styles.safeArea}>
-        <Header title="Discover Tasks" />
-        <LoadingState message="Loading available services..." />
-      </SafeAreaView>
-    );
-  }
-
-  if (error && tasks.length === 0) {
-    return (
-      <SafeAreaView style={styles.safeArea}>
-        <Header title="Discover Tasks" />
-        <ErrorState
-          message={error}
-          onRetry={async () => {
-            dispatch(setTasksLoading(true));
-            try {
-              const [cats, taskList] = await Promise.all([
-                getCategories(),
-                getTasks(),
-              ]);
-              dispatch(setCategories(cats));
-              dispatch(setTasks(taskList));
-            } catch {
-              dispatch(setTasksError('Failed to reload services.'));
-            } finally {
-              dispatch(setTasksLoading(false));
-            }
-          }}
-        />
-      </SafeAreaView>
-    );
-  }
+  };
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
-      <Header
-        title={`${greeting}, ${displayName}`}
-        showBack
-        onBack={() => {
-          if (router.canGoBack()) {
-            router.back();
-          } else {
-            router.push('/(main)/home');
-          }
-        }}
-        rightAction={
-          <View style={styles.headerRightRow}>
-            {selectedCount > 0 && (
-              <View style={styles.selectedCountBadge}>
-                <Text style={styles.selectedCountBadgeText}>{selectedCount}</Text>
-              </View>
-            )}
+      <View style={styles.container}>
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
+          {/* Top Bar: < Back link */}
+          <View style={styles.topNavRow}>
+            <TouchableOpacity
+              style={styles.backButton}
+              onPress={() => router.back()}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              accessibilityRole="button"
+              accessibilityLabel="Go back"
+            >
+              <Feather name="chevron-left" size={20} color={colors.primary} />
+              <Text style={styles.backButtonText}>Back</Text>
+            </TouchableOpacity>
+
             <TouchableOpacity
               onPress={() => router.push('/(main)/profile')}
-              style={styles.personIconButton}
-              accessibilityLabel="View and edit profile"
+              style={styles.profileIconButton}
+              accessibilityLabel="View profile"
               accessibilityRole="button"
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             >
-              <Feather name="user" size={24} color={colors.textPrimary} />
+              <Feather name="user" size={22} color={colors.textPrimary} />
             </TouchableOpacity>
           </View>
-        }
-      />
 
-      <FlatList
-        data={filteredTasks}
-        keyExtractor={(item) => item.id}
-        ListHeaderComponent={renderHeader}
-        keyboardShouldPersistTaps="handled"
-        contentContainerStyle={styles.listContent}
-        showsVerticalScrollIndicator={false}
-        renderItem={({ item }) => {
-          const isSelected = selectedTaskIds.includes(item.id);
-          return (
-            <TaskCard
-              name={item.name}
-              description={item.description}
-              selected={isSelected}
-              onPress={() => handleTaskToggle(item.id)}
-              categoryName={
-                !selectedCategoryId || isSearchActive
-                  ? categoryMap.get(item.categoryId)
-                  : undefined
-              }
-            />
-          );
-        }}
-        ListEmptyComponent={
-          <EmptyState
-            icon="search"
-            title="No services found"
-            subtitle={
-              isSearchActive
-                ? `No tasks matched "${searchQuery}". Try a different keyword.`
-                : 'No services available in this category.'
-            }
-            actionLabel={isSearchActive ? 'Clear Search' : 'View All Categories'}
-            onAction={
-              isSearchActive
-                ? handleClearSearch
-                : () => dispatch(setSelectedCategory(null))
-            }
-          />
-        }
-      />
+          {/* Heading & Subtitle */}
+          <Text style={styles.heading}>What do you need help with?</Text>
+          <Text style={styles.subtitle}>
+            Pick a category, then choose a service. You can add details next.
+          </Text>
 
-      {/* Fixed Bottom Action CTA */}
-      <BottomAction>
-        <Button
-          label={
-            selectedCount === 0
-              ? 'Select Services to Continue'
-              : `Continue (${selectedCount} selected)`
-          }
-          onPress={handleProceed}
-          disabled={selectedCount === 0}
-          fullWidth
-          size="lg"
-          icon="arrow-right"
-          iconPosition="right"
-        />
-      </BottomAction>
+          {/* Accordion List of Categories */}
+          <View style={styles.categoryList}>
+            {categories.map((category) => {
+              const isExpanded = expandedCategoryId === category.id;
+              const categoryTasks = tasks.filter(
+                (t) => t.categoryId === category.id
+              );
+
+              return (
+                <View
+                  key={category.id}
+                  style={[
+                    styles.categoryCard,
+                    isExpanded ? styles.categoryCardExpanded : styles.categoryCardCollapsed,
+                  ]}
+                >
+                  {/* Left Golden Accent Stripe for Expanded Card */}
+                  {isExpanded && <View style={styles.accentStripe} />}
+
+                  {/* Header / Clickable Area to Expand/Collapse */}
+                  <TouchableOpacity
+                    style={styles.categoryHeader}
+                    activeOpacity={0.8}
+                    onPress={() => handleToggleCategory(category.id)}
+                  >
+                    <View
+                      style={[
+                        styles.categoryIconSquare,
+                        isExpanded
+                          ? styles.categoryIconSquareExpanded
+                          : styles.categoryIconSquareCollapsed,
+                      ]}
+                    >
+                      <Feather
+                        name={category.icon as keyof typeof Feather.glyphMap}
+                        size={20}
+                        color={isExpanded ? '#FFFFFF' : colors.primary}
+                      />
+                    </View>
+
+                    <View style={styles.categoryHeaderTexts}>
+                      <Text style={styles.categoryTitle}>{category.name}</Text>
+                      <Text style={styles.categoryDesc}>
+                        {category.description}
+                      </Text>
+                    </View>
+                  </TouchableOpacity>
+
+                  {/* Expanded Sub-Services Section */}
+                  {isExpanded && (
+                    <View style={styles.expandedContent}>
+                      <Text style={styles.subservicesHeader}>
+                        WHAT KIND OF HELP?
+                      </Text>
+
+                      <View style={styles.pillsContainer}>
+                        {categoryTasks.map((task) => {
+                          const isSelected = selectedTaskIds.includes(task.id);
+                          return (
+                            <TouchableOpacity
+                              key={task.id}
+                              style={[
+                                styles.servicePill,
+                                isSelected && styles.servicePillSelected,
+                              ]}
+                              activeOpacity={0.7}
+                              onPress={() => handleToggleService(task.id)}
+                            >
+                              {isSelected && (
+                                <Feather
+                                  name="check"
+                                  size={14}
+                                  color="#FFFFFF"
+                                  style={styles.pillCheckIcon}
+                                />
+                              )}
+                              <Text
+                                style={[
+                                  styles.servicePillText,
+                                  isSelected && styles.servicePillTextSelected,
+                                ]}
+                              >
+                                {task.name}
+                              </Text>
+                            </TouchableOpacity>
+                          );
+                        })}
+                      </View>
+                    </View>
+                  )}
+                </View>
+              );
+            })}
+          </View>
+        </ScrollView>
+
+        {/* Sticky Continue CTA Bar */}
+        <View style={styles.stickyBottomBar}>
+          <TouchableOpacity
+            style={styles.continueButton}
+            activeOpacity={0.85}
+            onPress={handleContinue}
+            accessibilityRole="button"
+            accessibilityLabel="Continue to details"
+          >
+            <Text style={styles.continueButtonText}>
+              {selectedTaskIds.length > 0
+                ? `Continue (${selectedTaskIds.length})`
+                : 'Continue'}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </View>
     </SafeAreaView>
   );
 }
@@ -377,114 +268,183 @@ export default function TasksScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: '#FAF9F7',
   },
-  listContent: {
-    paddingHorizontal: spacing.screenHorizontal,
-    paddingBottom: spacing.xxl,
+  container: {
+    flex: 1,
+    position: 'relative',
   },
-  listHeader: {
-    paddingTop: spacing.xs,
-    paddingBottom: spacing.sm,
+  scrollContent: {
+    paddingHorizontal: 20,
+    paddingTop: 10,
+    paddingBottom: 100, // room for sticky continue button
   },
-  introSection: {
-    marginBottom: spacing.lg,
-  },
-  headline: {
-    ...typography.h2,
-    color: colors.textPrimary,
-    letterSpacing: -0.5,
-    marginBottom: spacing.xs,
-  },
-  subtitle: {
-    ...typography.body,
-    color: colors.textSecondary,
-    lineHeight: 22,
-  },
-  searchSection: {
-    marginBottom: spacing.xl,
-  },
-  categorySection: {
-    marginBottom: spacing.xl,
-  },
-  sectionTitleRow: {
+  topNavRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: spacing.md,
+    marginBottom: 20,
   },
-  sectionTitle: {
-    ...typography.h4,
-    color: colors.textPrimary,
-  },
-  clearFilterText: {
-    ...typography.captionMedium,
-    color: colors.primary,
-  },
-  categoryScroll: {
-    gap: spacing.md,
-    paddingRight: spacing.screenHorizontal,
-  },
-  categoryCardWrapper: {
-    width: 156,
-  },
-  filterStatusRow: {
+  backButton: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: spacing.md,
-    paddingTop: spacing.xs,
+    paddingVertical: 6,
+    paddingRight: 10,
+    marginLeft: -4,
   },
-  taskSectionTitle: {
-    ...typography.bodyMedium,
-    color: colors.textPrimary,
+  backButtonText: {
+    fontSize: 16,
     fontWeight: '600',
+    color: colors.primary,
+    marginLeft: 2,
   },
-  clearSelectionsText: {
-    ...typography.captionMedium,
-    color: colors.error,
-  },
-  selectedCountBadge: {
-    minWidth: 24,
-    height: 24,
-    borderRadius: radius.pill,
-    backgroundColor: colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 6,
-  },
-  selectedCountBadgeText: {
-    ...typography.micro,
-    color: colors.white,
-    fontWeight: '700',
-  },
-  headerRightRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-  },
-  personIconButton: {
+  profileIconButton: {
     width: 36,
     height: 36,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  instructionBanner: {
+  heading: {
+    fontSize: 26,
+    fontWeight: '700',
+    color: '#1A1D2B',
+    letterSpacing: -0.5,
+    marginBottom: 10,
+  },
+  subtitle: {
+    fontSize: 15,
+    color: '#6B7280',
+    lineHeight: 22,
+    marginBottom: 24,
+  },
+  categoryList: {
+    gap: 14,
+  },
+  categoryCard: {
+    borderRadius: 16,
+    borderWidth: 1,
+    overflow: 'hidden',
+    position: 'relative',
+  },
+  categoryCardCollapsed: {
+    backgroundColor: '#FFFFFF',
+    borderColor: '#E5E7EB',
+  },
+  categoryCardExpanded: {
+    backgroundColor: '#F0FAF5',
+    borderColor: colors.primary,
+  },
+  accentStripe: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    bottom: 0,
+    width: 5,
+    backgroundColor: '#E2A93B', // Golden accent stripe from screenshot 4
+    zIndex: 2,
+  },
+  categoryHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    padding: 16,
+    paddingLeft: 18,
+    gap: 14,
+  },
+  categoryIconSquare: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  categoryIconSquareCollapsed: {
+    backgroundColor: colors.highlightMint,
+  },
+  categoryIconSquareExpanded: {
+    backgroundColor: colors.primary,
+  },
+  categoryHeaderTexts: {
+    flex: 1,
+    justifyContent: 'center',
+  },
+  categoryTitle: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: '#1A1D2B',
+    marginBottom: 3,
+  },
+  categoryDesc: {
+    fontSize: 14,
+    color: '#6B7280',
+    lineHeight: 20,
+  },
+  expandedContent: {
+    paddingHorizontal: 18,
+    paddingBottom: 20,
+    paddingLeft: 22,
+  },
+  subservicesHeader: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#5A6B7A',
+    letterSpacing: 0.8,
+    marginBottom: 12,
+    marginTop: 4,
+  },
+  pillsContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+  },
+  servicePill: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.sm,
-    backgroundColor: colors.highlightMint,
+    backgroundColor: '#FFFFFF',
     borderWidth: 1,
-    borderColor: colors.primaryLight,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderRadius: radius.md,
-    marginBottom: spacing.lg,
+    borderColor: '#D1D5DB',
+    borderRadius: 9999,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
   },
-  instructionText: {
-    ...typography.caption,
-    color: colors.textPrimary,
-    flex: 1,
-    lineHeight: 18,
+  servicePillSelected: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+  },
+  pillCheckIcon: {
+    marginRight: 6,
+  },
+  servicePillText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#1A1D2B',
+  },
+  servicePillTextSelected: {
+    color: '#FFFFFF',
+    fontWeight: '600',
+  },
+  stickyBottomBar: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: '#FAF9F7',
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    paddingBottom: Platform.OS === 'ios' ? 24 : 16,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(229, 231, 235, 0.5)',
+  },
+  continueButton: {
+    backgroundColor: colors.primary,
+    borderRadius: 12,
+    height: 52,
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...shadows.sm,
+  },
+  continueButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '700',
   },
 });
