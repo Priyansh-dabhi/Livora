@@ -49,3 +49,9 @@ export {
   resetOnboarding,
   hydrateOnboarding,
 } from './onboardingSlice';
+
+// Welcome slice (first-time onboarding carousel)
+export {
+  markWelcomeSeen,
+  hydrateWelcome,
+} from './welcomeSlice';

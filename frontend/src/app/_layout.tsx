@@ -19,12 +19,14 @@ import {
   hydrateProfile,
   hydrateOnboarding,
   hydrateSelectedTasks,
+  hydrateWelcome,
 } from '@/store';
 import {
   getSession,
   getProfileData,
   getOnboardingComplete,
   getSelectedTaskIds,
+  getWelcomeSeen,
 } from '@/utils/storage';
 import { colors, typography, spacing, radius } from '@/theme';
 
@@ -35,12 +37,16 @@ function AppContent() {
   useEffect(() => {
     async function hydrateApp() {
       try {
-        const [session, profile, onboarding, selectedTasks] = await Promise.all([
-          getSession(),
-          getProfileData(),
-          getOnboardingComplete(),
-          getSelectedTaskIds(),
-        ]);
+        const [session, profile, onboarding, selectedTasks, welcomeSeen] =
+          await Promise.all([
+            getSession(),
+            getProfileData(),
+            getOnboardingComplete(),
+            getSelectedTaskIds(),
+            getWelcomeSeen(),
+          ]);
+
+        dispatch(hydrateWelcome(welcomeSeen));
 
         if (session) {
           dispatch(hydrateAuth(session));
@@ -91,6 +97,7 @@ function AppContent() {
         }}
       >
         <Stack.Screen name="index" />
+        <Stack.Screen name="(welcome)" />
         <Stack.Screen name="(auth)" />
         <Stack.Screen name="(onboarding)" />
         <Stack.Screen name="(main)" />

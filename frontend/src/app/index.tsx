@@ -10,9 +10,15 @@ import { Redirect } from 'expo-router';
 import { useAppSelector } from '@/store';
 
 export default function Index() {
+  const { hasSeenWelcome } = useAppSelector((state) => state.welcome);
   const { isAuthenticated, user } = useAppSelector((state) => state.auth);
   const { isProfileComplete } = useAppSelector((state) => state.profile);
   const { selectedTaskIds } = useAppSelector((state) => state.tasks);
+
+  // 0. First-time users see the welcome carousel
+  if (!hasSeenWelcome) {
+    return <Redirect href="/(welcome)/index" />;
+  }
 
   // 1. Unauthenticated users go to login
   if (!isAuthenticated) {

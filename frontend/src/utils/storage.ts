@@ -16,6 +16,7 @@ const KEYS = {
   PROFILE: 'livora_profile',
   ONBOARDING_COMPLETE: 'livora_onboarding_complete',
   SELECTED_TASKS: 'livora_selected_tasks',
+  WELCOME_SEEN: 'livora_welcome_seen',
 } as const;
 
 // ── Session (Secure) ────────────────────────────────────
@@ -81,4 +82,15 @@ export async function saveSelectedTaskIds(taskIds: string[]): Promise<void> {
 export async function getSelectedTaskIds(): Promise<string[]> {
   const json = await AsyncStorage.getItem(KEYS.SELECTED_TASKS);
   return json ? (JSON.parse(json) as string[]) : [];
+}
+
+// ── Welcome / First Launch ───────────────────────────────
+
+export async function saveWelcomeSeen(): Promise<void> {
+  await AsyncStorage.setItem(KEYS.WELCOME_SEEN, JSON.stringify(true));
+}
+
+export async function getWelcomeSeen(): Promise<boolean> {
+  const value = await AsyncStorage.getItem(KEYS.WELCOME_SEEN);
+  return value ? (JSON.parse(value) as boolean) : false;
 }
