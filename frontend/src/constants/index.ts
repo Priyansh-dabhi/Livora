@@ -11,3 +11,8 @@ export {
   OTP_RESEND_COOLDOWN_SECONDS,
   MAX_OTP_ATTEMPTS,
 } from './mockData';
+
+export {
+  SERVICE_CATEGORIES,
+  ALL_FLATTENED_TASKS,
+} from './serviceCatalog';

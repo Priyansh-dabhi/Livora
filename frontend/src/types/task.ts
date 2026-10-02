@@ -1,15 +1,39 @@
 /**
- * Task & Category type definitions
+ * Task, HelpType & Category Type Definitions
+ *
+ * Supports 3-level data hierarchy:
+ * Category -> Help Type -> Detailed Activity
  */
 
-export interface Category {
+export interface DetailedActivity {
+  id: string;
+  name: string;
+  description?: string;
+}
+
+export interface HelpType {
+  id: string;
+  name: string;
+  description?: string;
+  activities: DetailedActivity[];
+}
+
+export interface ServiceCategory {
   id: string;
   name: string;
   icon: string;
   description: string;
-  taskCount: number;
+  completeAssistanceTitle?: string;
+  completeAssistanceDesc?: string;
+  helpTypes: HelpType[];
 }
 
+// Backward-compatible Category interface
+export interface Category extends ServiceCategory {
+  taskCount?: number;
+}
+
+// Backward-compatible Task interface
 export interface Task {
   id: string;
   name: string;
@@ -17,12 +41,20 @@ export interface Task {
   description: string;
 }
 
+export type TimingOptionId = 'standard' | 'same_day' | 'express' | 'scheduled';
+
 export interface TasksState {
   categories: Category[];
   tasks: Task[];
   selectedCategoryId: string | null;
+  completeCategoryAssistance: boolean;
+  selectedHelpTypeIds: string[];
+  selectedActivityIds: string[];
+  selectedTiming: TimingOptionId;
+  description: string;
+  scheduledDate: string;
+  scheduledTime: string;
   selectedTaskIds: string[];
-  selectedTiming: string;
   searchQuery: string;
   isLoading: boolean;
   error: string | null;

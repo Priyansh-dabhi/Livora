@@ -25,9 +25,10 @@ import { Feather } from '@expo/vector-icons';
 
 import { colors, radius, shadows } from '@/theme';
 import { useAppDispatch, useAppSelector, setSelectedTiming } from '@/store';
+import type { TimingOptionId } from '@/types';
 
 interface TimingOption {
-  id: string;
+  id: TimingOptionId;
   icon: keyof typeof Feather.glyphMap;
   title: string;
   subtitle: string;
@@ -67,9 +68,9 @@ export default function TaskTimingScreen() {
   const currentTiming = useAppSelector(
     (state) => state.tasks.selectedTiming || 'standard'
   );
-  const [selectedId, setSelectedId] = useState<string>(currentTiming);
+  const [selectedId, setSelectedId] = useState<TimingOptionId>(currentTiming);
 
-  const handleSelectTiming = (id: string) => {
+  const handleSelectTiming = (id: TimingOptionId) => {
     setSelectedId(id);
     dispatch(setSelectedTiming(id));
   };

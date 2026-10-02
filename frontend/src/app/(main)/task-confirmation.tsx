@@ -1,54 +1,39 @@
 /**
- * Task Confirmation Screen
+ * Request Details Screen ("Tell us a little more")
  *
- * Review selected services before finalizing. Allows removing tasks,
- * navigating back to add more, and confirming to save and land on Home.
+ * Implements the general request detail flow:
+ * - Back button & category badge
+ * - "Tell us a little more" heading & "One or two lines is enough..." subtitle
+ * - Multiline description input
+ * - Conditional Date [DD/MM/YYYY] & Time (24h) [HH:MM] inputs when urgency is "scheduled"
+ * - Sticky "Leave it with us" bottom button
+ * - Celebratory completion state upon submission
  */
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
-  FlatList,
+  ScrollView,
   TouchableOpacity,
+  TextInput,
   StyleSheet,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 
-import {
-  Header,
-  BottomAction,
-  Button,
-  Badge,
-  EmptyState,
-  LoadingState,
-  Input,
-} from '@/components';
-import { colors, spacing, typography, radius } from '@/theme';
+import { colors, spacing, radius, shadows } from '@/theme';
 import {
   useAppDispatch,
   useAppSelector,
-  removeTaskSelection,
-  setCategories,
-  setTasks,
-  setTasksLoading,
+  setDescription,
+  setScheduledDate,
+  setScheduledTime,
+  resetRequest,
 } from '@/store';
-import {
-  getCategories,
-  getTasks,
-  saveSelectedTasks,
-} from '@/services/mockTaskService';
 import { saveSelectedTaskIds } from '@/utils/storage';
-import type { Task } from '@/types';
-
-const TIMING_OPTIONS = [
-  { id: 'standard', title: 'Standard', desc: '2-3 days', icon: 'calendar' },
-  { id: 'same_day', title: 'Same Day', desc: 'Delivered today', icon: 'zap' },
-  { id: 'express', title: 'Express', desc: '2-4 hrs', icon: 'clock' },
-  { id: 'scheduled', title: 'Scheduled', desc: 'Pick your slot', icon: 'check-square' },
-] as const;
 
 export default function TaskConfirmationScreen() {
   const router = useRouter();
@@ -56,282 +41,281 @@ export default function TaskConfirmationScreen() {
 
   const {
     categories,
-    tasks,
-    selectedTaskIds,
-    selectedTiming: reduxTiming,
-    isLoading,
+    selectedCategoryId,
+    completeCategoryAssistance,
+    selectedHelpTypeIds,
+    selectedActivityIds,
+    selectedTiming,
+    description: reduxDescription,
+    scheduledDate: reduxDate,
+    scheduledTime: reduxTime,
   } = useAppSelector((state) => state.tasks);
 
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [successMessage, setSuccessMessage] = useState<string | null>(null);
-  const [selectedTiming, setSelectedTiming] = useState<string>(
-    reduxTiming || 'standard'
-  );
-  const [specialNotes, setSpecialNotes] = useState<string>('');
+  // Find active category
+  const activeCategory =
+    categories.find((c) => c.id === selectedCategoryId) || categories[0];
 
-  // Fetch categories and tasks if not already loaded in Redux
-  useEffect(() => {
-    async function ensureData() {
-      if (categories.length > 0 && tasks.length > 0) return;
+  // Local form state initialized from Redux (preserves back navigation!)
+  const [localDesc, setLocalDesc] = useState(reduxDescription);
+  const [localDate, setLocalDate] = useState(reduxDate || '05/10/2026');
+  const [localTime, setLocalTime] = useState(reduxTime || '14:30');
+  const [isSubmitted, setIsSubmitted] = useState(false);
 
-      dispatch(setTasksLoading(true));
-      try {
-        const [cats, taskList] = await Promise.all([
-          getCategories(),
-          getTasks(),
-        ]);
-        dispatch(setCategories(cats));
-        dispatch(setTasks(taskList));
-      } finally {
-        dispatch(setTasksLoading(false));
+  const isScheduled = selectedTiming === 'scheduled';
+
+  // Gather selected activity names for preview tags
+  const selectedActivityNames: string[] = [];
+  if (completeCategoryAssistance) {
+    selectedActivityNames.push(
+      activeCategory?.completeAssistanceTitle ||
+        `Complete ${activeCategory?.name} assistance`
+    );
+  }
+  activeCategory?.helpTypes?.forEach((ht) => {
+    if (selectedHelpTypeIds.includes(ht.id)) {
+      selectedActivityNames.push(ht.name);
+    }
+    ht.activities.forEach((act) => {
+      if (selectedActivityIds.includes(act.id)) {
+        selectedActivityNames.push(act.name);
       }
-    }
+    });
+  });
 
-    ensureData();
-  }, [categories.length, tasks.length, dispatch]);
-
-  // Fast category lookup map
-  const categoryMap = useMemo(() => {
-    const map = new Map<string, string>();
-    categories.forEach((c) => map.set(c.id, c.name));
-    return map;
-  }, [categories]);
-
-  // List of selected Task objects
-  const selectedTasks = useMemo(() => {
-    return tasks.filter((task) => selectedTaskIds.includes(task.id));
-  }, [tasks, selectedTaskIds]);
-
-  const handleRemoveTask = (taskId: string) => {
-    dispatch(removeTaskSelection(taskId));
+  const handleDescChange = (text: string) => {
+    setLocalDesc(text);
+    dispatch(setDescription(text));
   };
 
-  const handleConfirm = async () => {
-    if (selectedTaskIds.length === 0) return;
-
-    setIsSubmitting(true);
-    try {
-      // 1. Call mock API service
-      await saveSelectedTasks(selectedTaskIds);
-
-      // 2. Persist to AsyncStorage
-      await saveSelectedTaskIds(selectedTaskIds);
-
-      setSuccessMessage('Your services have been confirmed!');
-
-      // 3. Navigate to Home
-      setTimeout(() => {
-        router.replace('/(main)/home');
-      }, 600);
-    } catch (err: unknown) {
-      console.warn('Failed to save selected tasks:', err);
-    } finally {
-      setIsSubmitting(false);
-    }
+  const handleDateChange = (text: string) => {
+    setLocalDate(text);
+    dispatch(setScheduledDate(text));
   };
 
-  if (isLoading && tasks.length === 0) {
+  const handleTimeChange = (text: string) => {
+    setLocalTime(text);
+    dispatch(setScheduledTime(text));
+  };
+
+  const handleSubmit = async () => {
+    dispatch(setDescription(localDesc));
+    if (isScheduled) {
+      dispatch(setScheduledDate(localDate));
+      dispatch(setScheduledTime(localTime));
+    }
+
+    // Persist to storage
+    await saveSelectedTaskIds(selectedActivityIds);
+
+    // Show celebratory completion screen
+    setIsSubmitted(true);
+  };
+
+  const handleFinishToHome = () => {
+    dispatch(resetRequest());
+    router.replace('/(main)/home');
+  };
+
+  // Completion Screen
+  if (isSubmitted) {
     return (
       <SafeAreaView style={styles.safeArea}>
-        <Header title="Confirmation" showBack />
-        <LoadingState message="Loading your selections..." />
+        <View style={styles.successContainer}>
+          <View style={styles.successIconOuter}>
+            <View style={styles.successIconInner}>
+              <Feather name="check" size={40} color="#FFFFFF" />
+            </View>
+          </View>
+
+          <Text style={styles.successTitle}>Leave it with us!</Text>
+          <Text style={styles.successSubtitle}>
+            Your Lifestyle Manager <Text style={styles.boldText}>Pilot LM</Text>{' '}
+            has received your request for{' '}
+            <Text style={styles.boldText}>{activeCategory?.name}</Text>. We are
+            organizing everything and will keep you updated with proof when it
+            matters.
+          </Text>
+
+          {/* Request Recap Card */}
+          <View style={styles.recapCard}>
+            <View style={styles.recapRow}>
+              <Text style={styles.recapLabel}>Timing</Text>
+              <Text style={styles.recapValue}>
+                {selectedTiming === 'same_day'
+                  ? 'Same day'
+                  : selectedTiming === 'express'
+                  ? 'Express'
+                  : selectedTiming === 'scheduled'
+                  ? `Scheduled (${localDate} at ${localTime})`
+                  : 'Standard'}
+              </Text>
+            </View>
+
+            {localDesc.trim().length > 0 && (
+              <View style={[styles.recapRow, { borderTopWidth: 1, borderTopColor: '#F3F4F6', paddingTop: 10 }]}>
+                <Text style={styles.recapLabel}>Notes</Text>
+                <Text style={styles.recapValue} numberOfLines={2}>
+                  {localDesc}
+                </Text>
+              </View>
+            )}
+          </View>
+
+          <TouchableOpacity
+            style={styles.doneButton}
+            activeOpacity={0.85}
+            onPress={handleFinishToHome}
+          >
+            <Text style={styles.doneButtonText}>Done</Text>
+          </TouchableOpacity>
+        </View>
       </SafeAreaView>
     );
   }
 
-  const renderHeader = () => (
-    <View style={styles.listHeader}>
-      {/* Summary Banner */}
-      <View style={styles.summaryCard}>
-        <View style={styles.summaryTopRow}>
-          <View style={styles.summaryIconWrapper}>
-            <Feather name="check-circle" size={24} color={colors.primary} />
-          </View>
-          <View style={styles.summaryTextWrapper}>
-            <Text style={styles.summaryTitle}>Review Your Services</Text>
-            <Text style={styles.summarySubtitle}>
-              {selectedTasks.length === 1
-                ? '1 service selected for your household'
-                : `${selectedTasks.length} services selected for your household`}
-            </Text>
-          </View>
-        </View>
-
-        <View style={styles.divider} />
-
-        <View style={styles.summaryBottomRow}>
-          <Text style={styles.addMorePrompt}>Want to include more?</Text>
-          <TouchableOpacity
-            onPress={() => router.back()}
-            style={styles.addMoreButton}
-            accessibilityRole="button"
-            accessibilityLabel="Add more services"
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-          >
-            <Feather name="plus" size={14} color={colors.primary} />
-            <Text style={styles.addMoreText}>Add Services</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      {/* Success Banner */}
-      {successMessage && (
-        <View style={styles.successBanner}>
-          <Feather name="check" size={16} color={colors.success} />
-          <Text style={styles.successText}>{successMessage}</Text>
-        </View>
-      )}
-
-      {selectedTasks.length > 0 && (
-        <Text style={styles.sectionHeader}>Selected Services</Text>
-      )}
-    </View>
-  );
-
-  const renderFooter = () => {
-    if (selectedTasks.length === 0) return null;
-
-    return (
-      <View style={styles.footerContainer}>
-        {/* Section: When do you need this? */}
-        <Text style={styles.sectionHeader}>When do you need these services?</Text>
-        <View style={styles.timingGrid}>
-          {TIMING_OPTIONS.map((opt) => {
-            const isSelected = selectedTiming === opt.id;
-            return (
-              <TouchableOpacity
-                key={opt.id}
-                style={[
-                  styles.timingCard,
-                  isSelected && styles.timingCardSelected,
-                ]}
-                onPress={() => setSelectedTiming(opt.id)}
-                activeOpacity={0.7}
-                accessibilityRole="radio"
-                accessibilityState={{ selected: isSelected }}
-                accessibilityLabel={`${opt.title}, ${opt.desc}`}
-              >
-                <View
-                  style={[
-                    styles.timingIconWrapper,
-                    isSelected && styles.timingIconWrapperSelected,
-                  ]}
-                >
-                  <Feather
-                    name={opt.icon as keyof typeof Feather.glyphMap}
-                    size={16}
-                    color={isSelected ? colors.primary : colors.textSecondary}
-                  />
-                </View>
-                <Text
-                  style={[
-                    styles.timingTitle,
-                    isSelected && styles.timingTitleSelected,
-                  ]}
-                >
-                  {opt.title}
-                </Text>
-                <Text style={styles.timingDesc}>{opt.desc}</Text>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-
-        {/* Section: Tell us a little more */}
-        <Text style={[styles.sectionHeader, { marginTop: spacing.lg }]}>
-          Tell us a little more (Optional)
-        </Text>
-        <Input
-          placeholder="Any special instructions or preferences for your concierge..."
-          value={specialNotes}
-          onChangeText={setSpecialNotes}
-          multiline
-          numberOfLines={3}
-          leftIcon="message-square"
-        />
-      </View>
-    );
-  };
-
   return (
     <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
-      <Header
-        title="Review Selections"
-        subtitle="Step 2 of 2"
-        showBack
-        onBack={() => router.back()}
-        rightAction={
-          <TouchableOpacity
-            onPress={() => router.push('/(main)/profile')}
-            style={styles.personIconButton}
-            accessibilityLabel="View profile and account"
-            accessibilityRole="button"
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-          >
-            <Feather name="user" size={24} color={colors.textPrimary} />
-          </TouchableOpacity>
-        }
-      />
+      <View style={styles.container}>
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
+          {/* Top Bar: < Back link */}
+          <View style={styles.topNavRow}>
+            <TouchableOpacity
+              style={styles.backButton}
+              onPress={() => router.back()}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              accessibilityRole="button"
+              accessibilityLabel="Go back"
+            >
+              <Feather name="chevron-left" size={20} color={colors.primary} />
+              <Text style={styles.backButtonText}>Back</Text>
+            </TouchableOpacity>
 
-      <FlatList
-        data={selectedTasks}
-        keyExtractor={(item) => item.id}
-        ListHeaderComponent={renderHeader}
-        ListFooterComponent={renderFooter}
-        contentContainerStyle={styles.listContent}
-        showsVerticalScrollIndicator={false}
-        renderItem={({ item }: { item: Task }) => {
-          const categoryName = categoryMap.get(item.categoryId) || 'General';
-          return (
-            <View style={styles.taskCard}>
-              <View style={styles.taskCardContent}>
-                <View style={styles.taskCardHeader}>
-                  <Badge label={categoryName} variant="primary" />
-                  <TouchableOpacity
-                    onPress={() => handleRemoveTask(item.id)}
-                    style={styles.removeButton}
-                    accessibilityLabel={`Remove ${item.name}`}
-                    accessibilityRole="button"
-                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                  >
-                    <Feather name="x" size={16} color={colors.textSecondary} />
-                  </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => router.push('/(main)/profile')}
+              style={styles.profileIconButton}
+              accessibilityLabel="View profile"
+              accessibilityRole="button"
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <Feather name="user" size={22} color={colors.textPrimary} />
+            </TouchableOpacity>
+          </View>
+
+          {/* Category Badge */}
+          <View style={styles.badgeWrapper}>
+            <View style={styles.categoryBadge}>
+              <Feather
+                name={activeCategory?.icon as keyof typeof Feather.glyphMap}
+                size={14}
+                color={colors.primary}
+              />
+              <Text style={styles.categoryBadgeText}>
+                {activeCategory?.name}
+              </Text>
+            </View>
+          </View>
+
+          {/* Selected Activities Chips (if any selected) */}
+          {selectedActivityNames.length > 0 && (
+            <View style={styles.chipsScroll}>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.chipsContent}
+              >
+                {selectedActivityNames.map((name, idx) => (
+                  <View key={idx} style={styles.selectionChip}>
+                    <Feather name="check" size={12} color={colors.primary} />
+                    <Text style={styles.selectionChipText}>{name}</Text>
+                  </View>
+                ))}
+              </ScrollView>
+            </View>
+          )}
+
+          {/* Heading & Subtitle */}
+          <Text style={styles.heading}>Tell us a little more</Text>
+          <Text style={styles.subtitle}>
+            One or two lines is enough. We'll take it from there.
+          </Text>
+
+          {/* Multiline Description Text Area */}
+          <View style={styles.textAreaContainer}>
+            <TextInput
+              style={styles.textAreaInput}
+              placeholder="e.g. AC in the guest room is leaking onto the floor"
+              placeholderTextColor={colors.textTertiary}
+              value={localDesc}
+              onChangeText={handleDescChange}
+              multiline
+              numberOfLines={4}
+              textAlignVertical="top"
+            />
+          </View>
+
+          {/* Conditional Scheduled Date & Time Fields */}
+          {isScheduled && (
+            <View style={styles.scheduledSection}>
+              {/* Date Input */}
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Date</Text>
+                <View style={styles.inputWrapper}>
+                  <Feather
+                    name="calendar"
+                    size={18}
+                    color={colors.textSecondary}
+                    style={styles.fieldIcon}
+                  />
+                  <TextInput
+                    style={styles.textInput}
+                    placeholder="DD/MM/YYYY"
+                    placeholderTextColor={colors.textTertiary}
+                    value={localDate}
+                    onChangeText={handleDateChange}
+                  />
                 </View>
+              </View>
 
-                <Text style={styles.taskName}>{item.name}</Text>
-                <Text style={styles.taskDescription}>{item.description}</Text>
+              {/* Time Input (24h) */}
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Time (24h)</Text>
+                <View style={styles.inputWrapper}>
+                  <Feather
+                    name="clock"
+                    size={18}
+                    color={colors.textSecondary}
+                    style={styles.fieldIcon}
+                  />
+                  <TextInput
+                    style={styles.textInput}
+                    placeholder="HH:MM"
+                    placeholderTextColor={colors.textTertiary}
+                    value={localTime}
+                    onChangeText={handleTimeChange}
+                  />
+                </View>
               </View>
             </View>
-          );
-        }}
-        ListEmptyComponent={
-          <EmptyState
-            icon="shopping-bag"
-            title="No services selected"
-            subtitle="You have removed all services. Go back to browse and select services for your home."
-            actionLabel="Browse Services"
-            onAction={() => router.back()}
-          />
-        }
-      />
+          )}
+        </ScrollView>
 
-      {/* Fixed Bottom CTA */}
-      <BottomAction>
-        <Button
-          label={
-            selectedTasks.length === 0
-              ? 'Select Services to Confirm'
-              : `Confirm & Finalize (${selectedTasks.length})`
-          }
-          onPress={handleConfirm}
-          loading={isSubmitting}
-          disabled={selectedTasks.length === 0}
-          fullWidth
-          size="lg"
-          icon="check"
-          iconPosition="right"
-        />
-      </BottomAction>
+        {/* Sticky Leave it with us CTA Bar */}
+        <View style={styles.stickyBottomBar}>
+          <TouchableOpacity
+            style={styles.submitButton}
+            activeOpacity={0.85}
+            onPress={handleSubmit}
+            accessibilityRole="button"
+            accessibilityLabel="Leave it with us"
+          >
+            <Text style={styles.submitButtonText}>Leave it with us</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
     </SafeAreaView>
   );
 }
@@ -339,180 +323,252 @@ export default function TaskConfirmationScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: '#FAF9F7',
   },
-  listContent: {
-    paddingHorizontal: spacing.screenHorizontal,
-    paddingBottom: spacing.xxl,
-  },
-  listHeader: {
-    paddingTop: spacing.xs,
-    paddingBottom: spacing.md,
-  },
-  summaryCard: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
-    padding: spacing.lg,
-    marginBottom: spacing.lg,
-  },
-  summaryTopRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-  },
-  summaryIconWrapper: {
-    width: 44,
-    height: 44,
-    borderRadius: radius.md,
-    backgroundColor: colors.highlightMint,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  summaryTextWrapper: {
+  container: {
     flex: 1,
+    position: 'relative',
   },
-  summaryTitle: {
-    ...typography.h4,
-    color: colors.textPrimary,
+  scrollContent: {
+    paddingHorizontal: 20,
+    paddingTop: 10,
+    paddingBottom: 110,
   },
-  summarySubtitle: {
-    ...typography.caption,
-    color: colors.textSecondary,
-    marginTop: 2,
-  },
-  divider: {
-    height: 1,
-    backgroundColor: colors.border,
-    marginVertical: spacing.md,
-  },
-  summaryBottomRow: {
+  topNavRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    marginBottom: 16,
   },
-  addMorePrompt: {
-    ...typography.caption,
-    color: colors.textSecondary,
-  },
-  addMoreButton: {
+  backButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.xs,
+    paddingVertical: 6,
+    paddingRight: 10,
+    marginLeft: -4,
   },
-  addMoreText: {
-    ...typography.captionMedium,
-    color: colors.primary,
-  },
-  successBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.successLight,
-    padding: spacing.md,
-    borderRadius: radius.md,
-    marginBottom: spacing.lg,
-    gap: spacing.sm,
-  },
-  successText: {
-    ...typography.caption,
-    color: colors.success,
-  },
-  sectionHeader: {
-    ...typography.label,
-    color: colors.textPrimary,
-    marginBottom: spacing.xs,
-  },
-  taskCard: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-    padding: spacing.lg,
-    marginBottom: spacing.sm,
-  },
-  taskCardContent: {
-    flex: 1,
-  },
-  taskCardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: spacing.xs,
-  },
-  removeButton: {
-    width: 28,
-    height: 28,
-    borderRadius: radius.pill,
-    backgroundColor: colors.surfaceElevated,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  taskName: {
-    ...typography.bodyMedium,
+  backButtonText: {
+    fontSize: 16,
     fontWeight: '600',
-    color: colors.textPrimary,
-    marginBottom: spacing.xxs,
+    color: colors.primary,
+    marginLeft: 2,
   },
-  taskDescription: {
-    ...typography.caption,
-    color: colors.textSecondary,
-    lineHeight: 18,
-  },
-  footerContainer: {
-    marginTop: spacing.lg,
-    paddingTop: spacing.lg,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-  },
-  timingGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.sm,
-    marginTop: spacing.sm,
-  },
-  timingCard: {
-    width: '48%',
-    backgroundColor: colors.surface,
-    borderWidth: 1.5,
-    borderColor: colors.border,
-    borderRadius: radius.md,
-    padding: spacing.md,
-  },
-  timingCardSelected: {
-    borderColor: colors.primary,
-    backgroundColor: colors.highlightMint,
-  },
-  timingIconWrapper: {
-    width: 32,
-    height: 32,
-    borderRadius: radius.sm,
-    backgroundColor: colors.surfaceElevated,
+  profileIconButton: {
+    width: 36,
+    height: 36,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: spacing.xs,
   },
-  timingIconWrapperSelected: {
-    backgroundColor: colors.white,
+  badgeWrapper: {
+    marginBottom: 12,
   },
-  timingTitle: {
-    ...typography.captionMedium,
-    color: colors.textPrimary,
+  categoryBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    backgroundColor: colors.highlightMint,
+    borderWidth: 1,
+    borderColor: colors.primaryLight,
+    borderRadius: radius.pill,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    gap: 6,
   },
-  timingTitleSelected: {
+  categoryBadgeText: {
+    fontSize: 13,
+    fontWeight: '700',
     color: colors.primary,
+  },
+  chipsScroll: {
+    marginBottom: 16,
+  },
+  chipsContent: {
+    gap: 8,
+  },
+  selectionChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderRadius: radius.pill,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    gap: 6,
+  },
+  selectionChipText: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: '#1A1D2B',
+  },
+  heading: {
+    fontSize: 26,
+    fontWeight: '700',
+    color: '#1A1D2B',
+    letterSpacing: -0.5,
+    marginBottom: 8,
+  },
+  subtitle: {
+    fontSize: 15,
+    color: '#6B7280',
+    lineHeight: 22,
+    marginBottom: 20,
+  },
+  textAreaContainer: {
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderRadius: 16,
+    padding: 16,
+    minHeight: 140,
+    marginBottom: 24,
+    ...shadows.sm,
+  },
+  textAreaInput: {
+    fontSize: 16,
+    color: '#1A1D2B',
+    lineHeight: 24,
+    flex: 1,
+  },
+  scheduledSection: {
+    gap: 16,
+    marginBottom: 24,
+  },
+  inputGroup: {
+    gap: 6,
+  },
+  inputLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#1A1D2B',
+  },
+  inputWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    height: 50,
+  },
+  fieldIcon: {
+    marginRight: 10,
+  },
+  textInput: {
+    flex: 1,
+    fontSize: 15,
+    color: '#1A1D2B',
+  },
+  stickyBottomBar: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: '#FAF9F7',
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    paddingBottom: Platform.OS === 'ios' ? 24 : 16,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(229, 231, 235, 0.6)',
+  },
+  submitButton: {
+    backgroundColor: colors.primary,
+    borderRadius: 12,
+    height: 52,
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...shadows.sm,
+  },
+  submitButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
     fontWeight: '700',
   },
-  timingDesc: {
-    ...typography.micro,
-    color: colors.textSecondary,
-    marginTop: 2,
-  },
-  personIconButton: {
-    width: 44,
-    height: 44,
+  // Success Celebration View
+  successContainer: {
+    flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: -spacing.sm,
+    paddingHorizontal: 24,
+  },
+  successIconOuter: {
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    backgroundColor: colors.highlightMint,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 24,
+  },
+  successIconInner: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...shadows.md,
+  },
+  successTitle: {
+    fontSize: 28,
+    fontWeight: '700',
+    color: '#1A1D2B',
+    letterSpacing: -0.5,
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  successSubtitle: {
+    fontSize: 15,
+    color: '#6B7280',
+    lineHeight: 23,
+    textAlign: 'center',
+    marginBottom: 28,
+    maxWidth: 320,
+  },
+  boldText: {
+    fontWeight: '700',
+    color: '#1A1D2B',
+  },
+  recapCard: {
+    width: '100%',
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderRadius: 16,
+    padding: 18,
+    gap: 10,
+    marginBottom: 32,
+    ...shadows.sm,
+  },
+  recapRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  recapLabel: {
+    fontSize: 14,
+    color: '#6B7280',
+  },
+  recapValue: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#1A1D2B',
+    maxWidth: '70%',
+    textAlign: 'right',
+  },
+  doneButton: {
+    width: '100%',
+    backgroundColor: colors.primary,
+    borderRadius: 12,
+    height: 52,
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...shadows.sm,
+  },
+  doneButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '700',
   },
 });

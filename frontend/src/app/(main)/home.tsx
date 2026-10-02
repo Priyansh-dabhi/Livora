@@ -10,7 +10,7 @@
  * - Sticky Lifestyle Manager bar with WhatsApp chat deeplink
  */
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import {
   View,
   Text,
@@ -33,7 +33,10 @@ import {
   setTasks,
   setSelectedCategory,
   setSearchQuery,
+  toggleActivity,
+  toggleHelpType,
 } from '@/store';
+import { SERVICE_CATEGORIES } from '@/constants/serviceCatalog';
 import { getCategories, getTasks } from '@/services/mockTaskService';
 
 function getTimeOfDayGreeting(): string {
@@ -84,10 +87,89 @@ export default function HomeScreen() {
     router.push('/(main)/tasks');
   };
 
+  // Contextual search across categories, help types, and detailed activities
+  const searchResults = useMemo(() => {
+    const q = localSearch.trim().toLowerCase();
+    if (!q) return [];
+
+    const results: {
+      id: string;
+      title: string;
+      subtitle: string;
+      categoryId: string;
+      helpTypeId?: string;
+      activityId?: string;
+    }[] = [];
+
+    SERVICE_CATEGORIES.forEach((cat) => {
+      // 1. Match category
+      if (
+        cat.name.toLowerCase().includes(q) ||
+        cat.description.toLowerCase().includes(q)
+      ) {
+        results.push({
+          id: `cat-${cat.id}`,
+          title: cat.name,
+          subtitle: `Category • ${cat.description}`,
+          categoryId: cat.id,
+        });
+      }
+
+      // 2. Match help types and activities
+      cat.helpTypes.forEach((ht) => {
+        if (
+          ht.name.toLowerCase().includes(q) ||
+          (ht.description && ht.description.toLowerCase().includes(q))
+        ) {
+          results.push({
+            id: `ht-${ht.id}`,
+            title: ht.name,
+            subtitle: `${cat.name} • Help Type`,
+            categoryId: cat.id,
+            helpTypeId: ht.id,
+          });
+        }
+
+        ht.activities.forEach((act) => {
+          if (
+            act.name.toLowerCase().includes(q) ||
+            (act.description && act.description.toLowerCase().includes(q))
+          ) {
+            results.push({
+              id: `act-${act.id}`,
+              title: act.name,
+              subtitle: `${cat.name} → ${ht.name}`,
+              categoryId: cat.id,
+              helpTypeId: ht.id,
+              activityId: act.id,
+            });
+          }
+        });
+      });
+    });
+
+    return results.slice(0, 6);
+  }, [localSearch]);
+
+  const handleSelectSearchResult = (result: (typeof searchResults)[0]) => {
+    dispatch(setSelectedCategory(result.categoryId));
+    if (result.activityId) {
+      dispatch(toggleActivity(result.activityId));
+    } else if (result.helpTypeId) {
+      dispatch(toggleHelpType(result.helpTypeId));
+    }
+    setLocalSearch('');
+    router.push('/(main)/tasks');
+  };
+
   // Navigate to all services screen with search
   const handleSearchSubmit = () => {
-    dispatch(setSearchQuery(localSearch));
-    router.push('/(main)/tasks');
+    if (searchResults.length > 0) {
+      handleSelectSearchResult(searchResults[0]);
+    } else {
+      dispatch(setSearchQuery(localSearch));
+      router.push('/(main)/tasks');
+    }
   };
 
   // WhatsApp Deeplink: opens WhatsApp to chat with Lifestyle Manager (+91 90000 00001)
@@ -139,22 +221,60 @@ export default function HomeScreen() {
           <Text style={styles.mainHeading}>What do you need help with?</Text>
 
           {/* Search Bar */}
-          <View style={styles.searchContainer}>
-            <Feather
-              name="search"
-              size={18}
-              color={colors.textSecondary}
-              style={styles.searchIcon}
-            />
-            <TextInput
-              style={styles.searchInput}
-              placeholder="AC leaking, cook for weekends..."
-              placeholderTextColor={colors.textTertiary}
-              value={localSearch}
-              onChangeText={setLocalSearch}
-              onSubmitEditing={handleSearchSubmit}
-              returnKeyType="search"
-            />
+          <View style={styles.searchWrapper}>
+            <View style={styles.searchContainer}>
+              <Feather
+                name="search"
+                size={18}
+                color={colors.textSecondary}
+                style={styles.searchIcon}
+              />
+              <TextInput
+                style={styles.searchInput}
+                placeholder="AC leaking, cook for weekends..."
+                placeholderTextColor={colors.textTertiary}
+                value={localSearch}
+                onChangeText={setLocalSearch}
+                onSubmitEditing={handleSearchSubmit}
+                returnKeyType="search"
+              />
+              {localSearch.length > 0 && (
+                <TouchableOpacity
+                  onPress={() => setLocalSearch('')}
+                  style={styles.clearSearchBtn}
+                >
+                  <Feather name="x" size={16} color={colors.textSecondary} />
+                </TouchableOpacity>
+              )}
+            </View>
+
+            {/* Live Search Results Dropdown */}
+            {searchResults.length > 0 && (
+              <View style={styles.searchResultsBox}>
+                {searchResults.map((item) => (
+                  <TouchableOpacity
+                    key={item.id}
+                    style={styles.searchResultItem}
+                    activeOpacity={0.7}
+                    onPress={() => handleSelectSearchResult(item)}
+                  >
+                    <View style={styles.searchResultIcon}>
+                      <Feather
+                        name="arrow-up-right"
+                        size={16}
+                        color={colors.primary}
+                      />
+                    </View>
+                    <View style={styles.searchResultTexts}>
+                      <Text style={styles.searchResultTitle}>{item.title}</Text>
+                      <Text style={styles.searchResultSubtitle}>
+                        {item.subtitle}
+                      </Text>
+                    </View>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
           </View>
 
           {/* Section: POPULAR WITH FAMILIES LIKE YOURS */}
@@ -398,6 +518,11 @@ const styles = StyleSheet.create({
     letterSpacing: -0.4,
     marginBottom: 16,
   },
+  searchWrapper: {
+    marginBottom: 28,
+    position: 'relative',
+    zIndex: 10,
+  },
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -407,7 +532,6 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     paddingHorizontal: 16,
     height: 52,
-    marginBottom: 28,
   },
   searchIcon: {
     marginRight: 10,
@@ -417,6 +541,48 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: '#1A1D2B',
     paddingVertical: 0,
+  },
+  clearSearchBtn: {
+    padding: 6,
+  },
+  searchResultsBox: {
+    marginTop: 8,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderRadius: 14,
+    paddingVertical: 6,
+    ...shadows.md,
+  },
+  searchResultItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    gap: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
+  },
+  searchResultIcon: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: colors.highlightMint,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  searchResultTexts: {
+    flex: 1,
+  },
+  searchResultTitle: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#1A1D2B',
+  },
+  searchResultSubtitle: {
+    fontSize: 12,
+    color: '#6B7280',
+    marginTop: 2,
   },
   popularSection: {
     marginBottom: 32,

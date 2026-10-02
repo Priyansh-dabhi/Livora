@@ -20,7 +20,11 @@ export type {
 } from './profile';
 
 export type {
+  DetailedActivity,
+  HelpType,
+  ServiceCategory,
   Category,
   Task,
+  TimingOptionId,
   TasksState,
 } from './task';
