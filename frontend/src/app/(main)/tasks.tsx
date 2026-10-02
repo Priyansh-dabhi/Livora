@@ -49,12 +49,13 @@ export default function TasksScreen() {
     selectedActivityIds,
   } = useAppSelector((state) => state.tasks);
 
-  // Active expanded category (defaults to Redux selection or first category)
-  const activeCategoryId = selectedCategoryId || categories[0]?.id || 'cat-errands';
-  const activeCategory = categories.find(
-    (c: ServiceCategory) => c.id === activeCategoryId
-  );
+  // Active expanded category: use selectedCategoryId from Redux (can be null when all closed)
+  const activeCategoryId = selectedCategoryId;
+  const activeCategory = activeCategoryId
+    ? categories.find((c: ServiceCategory) => c.id === activeCategoryId)
+    : null;
   const isCategoryComingSoon = !!activeCategory?.isComingSoon;
+  const isContinueDisabled = !activeCategoryId || isCategoryComingSoon;
 
   // Set of expanded help type IDs for accordion toggle
   const [expandedHelpTypeIds, setExpandedHelpTypeIds] = useState<string[]>([
@@ -62,7 +63,11 @@ export default function TasksScreen() {
   ]);
 
   const handleToggleCategory = (catId: string) => {
-    dispatch(setSelectedCategory(catId));
+    if (activeCategoryId === catId) {
+      dispatch(setSelectedCategory(null));
+    } else {
+      dispatch(setSelectedCategory(catId));
+    }
   };
 
   const handleToggleExpandHelpType = (helpTypeId: string) => {
@@ -103,6 +108,15 @@ export default function TasksScreen() {
     selectedActivityIds.length;
 
   const handleContinue = () => {
+    if (!activeCategoryId) {
+      Alert.alert(
+        'Please Select a Service',
+        'Please tap and select a service category before continuing.',
+        [{ text: 'OK' }]
+      );
+      return;
+    }
+
     if (isCategoryComingSoon) {
       Alert.alert(
         'Coming Soon',
@@ -167,13 +181,20 @@ export default function TasksScreen() {
                     <View style={styles.categoryHeaderTexts}>
                       <View style={styles.titleWithBadgeRow}>
                         <Text style={styles.categoryTitle}>{category.name}</Text>
-                        {category.isComingSoon && (
-                          <View style={styles.comingSoonBadge}>
-                            <Text style={styles.comingSoonBadgeText}>
-                              Coming soon
-                            </Text>
-                          </View>
-                        )}
+                        <View style={styles.badgeAndChevronRow}>
+                          {category.isComingSoon && (
+                            <View style={styles.comingSoonBadge}>
+                              <Text style={styles.comingSoonBadgeText}>
+                                Coming soon
+                              </Text>
+                            </View>
+                          )}
+                          <Feather
+                            name="chevron-down"
+                            size={18}
+                            color={colors.textSecondary}
+                          />
+                        </View>
                       </View>
                       <Text style={styles.categoryDesc} numberOfLines={2}>
                         {category.description}
@@ -206,13 +227,20 @@ export default function TasksScreen() {
                     <View style={styles.categoryHeaderTexts}>
                       <View style={styles.titleWithBadgeRow}>
                         <Text style={styles.categoryTitle}>{category.name}</Text>
-                        {category.isComingSoon && (
-                          <View style={styles.comingSoonBadge}>
-                            <Text style={styles.comingSoonBadgeText}>
-                              Coming soon
-                            </Text>
-                          </View>
-                        )}
+                        <View style={styles.badgeAndChevronRow}>
+                          {category.isComingSoon && (
+                            <View style={styles.comingSoonBadge}>
+                              <Text style={styles.comingSoonBadgeText}>
+                                Coming soon
+                              </Text>
+                            </View>
+                          )}
+                          <Feather
+                            name="chevron-up"
+                            size={18}
+                            color={colors.primary}
+                          />
+                        </View>
                       </View>
                       <Text style={styles.categoryDesc}>
                         {category.description}
@@ -495,25 +523,29 @@ export default function TasksScreen() {
           <TouchableOpacity
             style={[
               styles.continueButton,
-              isCategoryComingSoon && styles.continueButtonDisabled,
+              isContinueDisabled && styles.continueButtonDisabled,
             ]}
-            activeOpacity={isCategoryComingSoon ? 0.9 : 0.85}
+            activeOpacity={isContinueDisabled ? 0.9 : 0.85}
             onPress={handleContinue}
             accessibilityRole="button"
             accessibilityLabel={
               isCategoryComingSoon
                 ? 'This service is coming soon'
+                : !activeCategoryId
+                ? 'Select a service to continue'
                 : 'Continue to timing'
             }
           >
             <Text
               style={[
                 styles.continueButtonText,
-                isCategoryComingSoon && styles.continueButtonTextDisabled,
+                isContinueDisabled && styles.continueButtonTextDisabled,
               ]}
             >
               {isCategoryComingSoon
                 ? 'Coming Soon — Unavailable'
+                : !activeCategoryId
+                ? 'Select a service to continue'
                 : totalSelectedCount > 0
                 ? `Continue (${totalSelectedCount} selected)`
                 : 'Continue'}
@@ -640,6 +672,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    gap: 8,
+  },
+  badgeAndChevronRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: 8,
   },
   comingSoonBadge: {
