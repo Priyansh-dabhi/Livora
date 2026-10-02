@@ -25,6 +25,7 @@ export interface ServiceCategory {
   description: string;
   completeAssistanceTitle?: string;
   completeAssistanceDesc?: string;
+  isComingSoon?: boolean;
   helpTypes: HelpType[];
 }
 

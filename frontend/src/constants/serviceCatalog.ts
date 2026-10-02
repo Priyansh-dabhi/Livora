@@ -216,6 +216,7 @@ export const SERVICE_CATEGORIES: Category[] = [
     completeAssistanceTitle: 'Complete Travel & Tourism assistance',
     completeAssistanceDesc:
       'End-to-end itinerary planning, booking, and round-the-clock trip support.',
+    isComingSoon: true,
     taskCount: 6,
     helpTypes: [
       {
@@ -279,6 +280,7 @@ export const SERVICE_CATEGORIES: Category[] = [
     completeAssistanceTitle: 'Complete Health & Medical assistance',
     completeAssistanceDesc:
       'Comprehensive health concierge for doctor visits, medications, and testing.',
+    isComingSoon: true,
     taskCount: 6,
     helpTypes: [
       {
@@ -342,6 +344,7 @@ export const SERVICE_CATEGORIES: Category[] = [
     completeAssistanceTitle: 'Complete Senior Care assistance',
     completeAssistanceDesc:
       'Dedicated, caring support for aging parents and seniors living independently.',
+    isComingSoon: true,
     taskCount: 4,
     helpTypes: [
       {
@@ -388,6 +391,7 @@ export const SERVICE_CATEGORIES: Category[] = [
     completeAssistanceTitle: 'Complete Events & Management assistance',
     completeAssistanceDesc:
       'End-to-end event production, guest coordination, and vendor supervision.',
+    isComingSoon: true,
     taskCount: 4,
     helpTypes: [
       {

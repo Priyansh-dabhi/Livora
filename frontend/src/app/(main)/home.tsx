@@ -328,6 +328,9 @@ export default function HomeScreen() {
                   style={styles.pillIcon}
                 />
                 <Text style={styles.pillText}>Travel & Tourism</Text>
+                <View style={styles.comingSoonPillTag}>
+                  <Text style={styles.comingSoonPillTagText}>Soon</Text>
+                </View>
               </TouchableOpacity>
             </View>
 
@@ -345,6 +348,9 @@ export default function HomeScreen() {
                   style={styles.pillIcon}
                 />
                 <Text style={styles.pillText}>Health & Medical</Text>
+                <View style={styles.comingSoonPillTag}>
+                  <Text style={styles.comingSoonPillTagText}>Soon</Text>
+                </View>
               </TouchableOpacity>
 
               <TouchableOpacity
@@ -359,6 +365,9 @@ export default function HomeScreen() {
                   style={styles.pillIcon}
                 />
                 <Text style={styles.pillText}>Senior Care</Text>
+                <View style={styles.comingSoonPillTag}>
+                  <Text style={styles.comingSoonPillTagText}>Soon</Text>
+                </View>
               </TouchableOpacity>
             </View>
 
@@ -376,6 +385,9 @@ export default function HomeScreen() {
                   style={styles.pillIcon}
                 />
                 <Text style={styles.pillText}>Events & Management</Text>
+                <View style={styles.comingSoonPillTag}>
+                  <Text style={styles.comingSoonPillTagText}>Soon</Text>
+                </View>
               </TouchableOpacity>
             </View>
 
@@ -618,6 +630,21 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '600',
     color: '#1A1D2B',
+  },
+  comingSoonPillTag: {
+    backgroundColor: '#FEF3C7',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+    marginLeft: 6,
+    borderWidth: 1,
+    borderColor: '#FDE68A',
+  },
+  comingSoonPillTagText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#92400E',
+    letterSpacing: 0.2,
   },
   browseAllLink: {
     flexDirection: 'row',

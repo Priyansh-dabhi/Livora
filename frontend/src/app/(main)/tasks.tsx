@@ -18,6 +18,7 @@ import {
   TouchableOpacity,
   StyleSheet,
   Platform,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -50,6 +51,10 @@ export default function TasksScreen() {
 
   // Active expanded category (defaults to Redux selection or first category)
   const activeCategoryId = selectedCategoryId || categories[0]?.id || 'cat-errands';
+  const activeCategory = categories.find(
+    (c: ServiceCategory) => c.id === activeCategoryId
+  );
+  const isCategoryComingSoon = !!activeCategory?.isComingSoon;
 
   // Set of expanded help type IDs for accordion toggle
   const [expandedHelpTypeIds, setExpandedHelpTypeIds] = useState<string[]>([
@@ -98,6 +103,15 @@ export default function TasksScreen() {
     selectedActivityIds.length;
 
   const handleContinue = () => {
+    if (isCategoryComingSoon) {
+      Alert.alert(
+        'Coming Soon',
+        `${activeCategory?.name || 'This service'} is coming soon. Requests cannot be submitted for this service yet.`,
+        [{ text: 'OK' }]
+      );
+      return;
+    }
+
     // Category is already selected; navigate to "When do you need this?"
     router.push('/(main)/task-timing');
   };
@@ -151,7 +165,16 @@ export default function TasksScreen() {
                       />
                     </View>
                     <View style={styles.categoryHeaderTexts}>
-                      <Text style={styles.categoryTitle}>{category.name}</Text>
+                      <View style={styles.titleWithBadgeRow}>
+                        <Text style={styles.categoryTitle}>{category.name}</Text>
+                        {category.isComingSoon && (
+                          <View style={styles.comingSoonBadge}>
+                            <Text style={styles.comingSoonBadgeText}>
+                              Coming soon
+                            </Text>
+                          </View>
+                        )}
+                      </View>
                       <Text style={styles.categoryDesc} numberOfLines={2}>
                         {category.description}
                       </Text>
@@ -181,12 +204,36 @@ export default function TasksScreen() {
                     </View>
 
                     <View style={styles.categoryHeaderTexts}>
-                      <Text style={styles.categoryTitle}>{category.name}</Text>
+                      <View style={styles.titleWithBadgeRow}>
+                        <Text style={styles.categoryTitle}>{category.name}</Text>
+                        {category.isComingSoon && (
+                          <View style={styles.comingSoonBadge}>
+                            <Text style={styles.comingSoonBadgeText}>
+                              Coming soon
+                            </Text>
+                          </View>
+                        )}
+                      </View>
                       <Text style={styles.categoryDesc}>
                         {category.description}
                       </Text>
                     </View>
                   </TouchableOpacity>
+
+                  {/* Coming Soon Notice Banner if applicable */}
+                  {category.isComingSoon && (
+                    <View style={styles.comingSoonBanner}>
+                      <Feather
+                        name="clock"
+                        size={15}
+                        color="#92400E"
+                        style={styles.comingSoonBannerIcon}
+                      />
+                      <Text style={styles.comingSoonBannerText}>
+                        This service is coming soon. You can explore activities below, but requests cannot be submitted yet.
+                      </Text>
+                    </View>
+                  )}
 
                   {/* Complete Category Assistance Card (Option Level 2) */}
                   <View style={styles.completeAssistanceContainer}>
@@ -446,14 +493,28 @@ export default function TasksScreen() {
         {/* Sticky Continue CTA Bar */}
         <View style={styles.stickyBottomBar}>
           <TouchableOpacity
-            style={styles.continueButton}
-            activeOpacity={0.85}
+            style={[
+              styles.continueButton,
+              isCategoryComingSoon && styles.continueButtonDisabled,
+            ]}
+            activeOpacity={isCategoryComingSoon ? 0.9 : 0.85}
             onPress={handleContinue}
             accessibilityRole="button"
-            accessibilityLabel="Continue to timing"
+            accessibilityLabel={
+              isCategoryComingSoon
+                ? 'This service is coming soon'
+                : 'Continue to timing'
+            }
           >
-            <Text style={styles.continueButtonText}>
-              {totalSelectedCount > 0
+            <Text
+              style={[
+                styles.continueButtonText,
+                isCategoryComingSoon && styles.continueButtonTextDisabled,
+              ]}
+            >
+              {isCategoryComingSoon
+                ? 'Coming Soon — Unavailable'
+                : totalSelectedCount > 0
                 ? `Continue (${totalSelectedCount} selected)`
                 : 'Continue'}
             </Text>
@@ -573,6 +634,49 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#1A1D2B',
     marginBottom: 3,
+    flexShrink: 1,
+  },
+  titleWithBadgeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
+  },
+  comingSoonBadge: {
+    backgroundColor: '#FEF3C7',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#FDE68A',
+  },
+  comingSoonBadgeText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#92400E',
+    letterSpacing: 0.2,
+  },
+  comingSoonBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFBEB',
+    borderWidth: 1,
+    borderColor: '#FDE68A',
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginHorizontal: 16,
+    marginBottom: 16,
+  },
+  comingSoonBannerIcon: {
+    marginRight: 8,
+  },
+  comingSoonBannerText: {
+    flex: 1,
+    fontSize: 13,
+    color: '#92400E',
+    lineHeight: 18,
+    fontWeight: '500',
   },
   categoryDesc: {
     fontSize: 14,
@@ -783,5 +887,15 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '700',
+  },
+  continueButtonDisabled: {
+    backgroundColor: '#E5E7EB',
+    borderColor: '#D1D5DB',
+    borderWidth: 1,
+    shadowOpacity: 0,
+    elevation: 0,
+  },
+  continueButtonTextDisabled: {
+    color: '#9CA3AF',
   },
 });
