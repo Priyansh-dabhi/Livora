@@ -193,16 +193,6 @@ export default function TaskConfirmationScreen() {
               <Feather name="chevron-left" size={20} color={colors.primary} />
               <Text style={styles.backButtonText}>Back</Text>
             </TouchableOpacity>
-
-            <TouchableOpacity
-              onPress={() => router.push('/(main)/profile')}
-              style={styles.profileIconButton}
-              accessibilityLabel="View profile"
-              accessibilityRole="button"
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-            >
-              <Feather name="user" size={22} color={colors.textPrimary} />
-            </TouchableOpacity>
           </View>
 
           {/* Category Badge */}
@@ -352,12 +342,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: colors.primary,
     marginLeft: 2,
-  },
-  profileIconButton: {
-    width: 36,
-    height: 36,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   badgeWrapper: {
     marginBottom: 12,
