@@ -99,16 +99,9 @@ export default function TasksScreen() {
     dispatch(toggleTaskSelection(taskId));
   };
 
-  // Proceed to confirmation screen
+  // Proceed to timing screen ("When do you need this?")
   const handleContinue = () => {
-    if (selectedTaskIds.length === 0) {
-      // If nothing selected yet, select the first task of the current expanded category
-      const currentTasks = tasks.filter((t) => t.categoryId === expandedCategoryId);
-      if (currentTasks.length > 0) {
-        dispatch(toggleTaskSelection(currentTasks[0].id));
-      }
-    }
-    router.push('/(main)/task-confirmation');
+    router.push('/(main)/task-timing');
   };
 
   return (

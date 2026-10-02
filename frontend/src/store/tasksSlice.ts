@@ -12,6 +12,7 @@ const initialState: TasksState = {
   tasks: [],
   selectedCategoryId: null,
   selectedTaskIds: [],
+  selectedTiming: 'standard',
   searchQuery: '',
   isLoading: false,
   error: null,
@@ -69,6 +70,10 @@ const tasksSlice = createSlice({
       state.selectedTaskIds = action.payload;
     },
 
+    setSelectedTiming(state, action: PayloadAction<string>) {
+      state.selectedTiming = action.payload;
+    },
+
     setSearchQuery(state, action: PayloadAction<string>) {
       state.searchQuery = action.payload;
     },
@@ -82,6 +87,7 @@ const tasksSlice = createSlice({
       state.tasks = [];
       state.selectedCategoryId = null;
       state.selectedTaskIds = [];
+      state.selectedTiming = 'standard';
       state.searchQuery = '';
       state.isLoading = false;
       state.error = null;
@@ -103,6 +109,7 @@ export const {
   toggleTaskSelection,
   removeTaskSelection,
   setSelectedTaskIds,
+  setSelectedTiming,
   setSearchQuery,
   clearSelections,
   clearTasksState,

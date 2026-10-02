@@ -22,6 +22,7 @@ export interface TasksState {
   tasks: Task[];
   selectedCategoryId: string | null;
   selectedTaskIds: string[];
+  selectedTiming: string;
   searchQuery: string;
   isLoading: boolean;
   error: string | null;

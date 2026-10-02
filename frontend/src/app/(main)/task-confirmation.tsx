@@ -54,13 +54,19 @@ export default function TaskConfirmationScreen() {
   const router = useRouter();
   const dispatch = useAppDispatch();
 
-  const { categories, tasks, selectedTaskIds, isLoading } = useAppSelector(
-    (state) => state.tasks,
-  );
+  const {
+    categories,
+    tasks,
+    selectedTaskIds,
+    selectedTiming: reduxTiming,
+    isLoading,
+  } = useAppSelector((state) => state.tasks);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
-  const [selectedTiming, setSelectedTiming] = useState<string>('standard');
+  const [selectedTiming, setSelectedTiming] = useState<string>(
+    reduxTiming || 'standard'
+  );
   const [specialNotes, setSpecialNotes] = useState<string>('');
 
   // Fetch categories and tasks if not already loaded in Redux

@@ -37,6 +37,7 @@ export {
   toggleTaskSelection,
   removeTaskSelection,
   setSelectedTaskIds,
+  setSelectedTiming,
   setSearchQuery,
   clearSelections,
   clearTasksState,
