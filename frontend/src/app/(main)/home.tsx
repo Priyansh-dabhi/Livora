@@ -327,32 +327,32 @@ export default function HomeScreen() {
               </View>
             </View>
           </View>
-        </ScrollView>
 
-        {/* Sticky Lifestyle Manager Bar (Bottom) */}
-        <View style={styles.stickyBottomContainer}>
-          <View style={styles.lmCard}>
-            <View style={styles.lmInfo}>
-              <Text style={styles.lmLabel}>Your Lifestyle Manager</Text>
-              <Text style={styles.lmName}>Pilot LM</Text>
+          {/* Lifestyle Manager Card (At bottom of content, not floating) */}
+          <View style={styles.lmCardContainer}>
+            <View style={styles.lmCard}>
+              <View style={styles.lmInfo}>
+                <Text style={styles.lmLabel}>Your Lifestyle Manager</Text>
+                <Text style={styles.lmName}>Pilot LM</Text>
+              </View>
+              <TouchableOpacity
+                style={styles.chatButton}
+                activeOpacity={0.8}
+                onPress={handleOpenWhatsApp}
+                accessibilityRole="button"
+                accessibilityLabel="Chat with Lifestyle Manager on WhatsApp"
+              >
+                <Feather
+                  name="message-circle"
+                  size={18}
+                  color={colors.primary}
+                  style={styles.chatIcon}
+                />
+                <Text style={styles.chatButtonText}>Chat</Text>
+              </TouchableOpacity>
             </View>
-            <TouchableOpacity
-              style={styles.chatButton}
-              activeOpacity={0.8}
-              onPress={handleOpenWhatsApp}
-              accessibilityRole="button"
-              accessibilityLabel="Chat with Lifestyle Manager on WhatsApp"
-            >
-              <Feather
-                name="message-circle"
-                size={18}
-                color={colors.primary}
-                style={styles.chatIcon}
-              />
-              <Text style={styles.chatButtonText}>Chat</Text>
-            </TouchableOpacity>
           </View>
-        </View>
+        </ScrollView>
       </View>
     </SafeAreaView>
   );
@@ -370,7 +370,7 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingHorizontal: 20,
     paddingTop: 12,
-    paddingBottom: 110, // room for sticky bottom card
+    paddingBottom: 32,
   },
   topBar: {
     flexDirection: 'row',
@@ -497,14 +497,9 @@ const styles = StyleSheet.create({
     color: '#6B7280',
     lineHeight: 20,
   },
-  stickyBottomContainer: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    paddingHorizontal: 16,
-    paddingBottom: Platform.OS === 'ios' ? 20 : 16,
-    backgroundColor: 'transparent',
+  lmCardContainer: {
+    marginTop: 8,
+    marginBottom: 16,
   },
   lmCard: {
     flexDirection: 'row',
