@@ -15,7 +15,7 @@ export default function WelcomeLayout() {
         animation: 'fade',
       }}
     >
-      <Stack.Screen name="index" />
+      <Stack.Screen name="welcome" />
     </Stack>
   );
 }

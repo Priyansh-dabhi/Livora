@@ -17,7 +17,7 @@ export default function Index() {
 
   // 0. First-time users see the welcome carousel
   if (!hasSeenWelcome) {
-    return <Redirect href="/(welcome)/index" />;
+    return <Redirect href="/(welcome)/welcome" />;
   }
 
   // 1. Unauthenticated users go to login
