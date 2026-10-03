@@ -1,0 +1,55 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id              String    @id @default(uuid())
+  email           String    @unique
+  passwordHash    String
+  emailVerifiedAt DateTime?
+  phone           String?
+  phoneVerifiedAt DateTime?
+  name            String?
+  address         String?
+  businessName    String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  otpChallenges   OtpChallenge[]
+
+  @@index([email])
+  @@map("users")
+}
+
+enum OtpChannel {
+  EMAIL
+}
+
+enum OtpPurpose {
+  EMAIL_VERIFICATION
+  LOGIN
+}
+
+model OtpChallenge {
+  id                String     @id @default(uuid())
+  userId            String
+  channel           OtpChannel
+  purpose           OtpPurpose
+  codeHash          String
+  expiresAt         DateTime
+  attempts          Int        @default(0)
+  maxAttempts       Int        @default(5)
+  consumedAt        DateTime?
+  resendAvailableAt DateTime
+  createdAt         DateTime   @default(now())
+
+  user              User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, purpose])
+  @@map("otp_challenges")
+}
