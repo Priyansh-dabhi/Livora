@@ -1,5 +1,6 @@
-import process from 'node:process';
 import { PrismaClient } from '@prisma/client';
+
+declare const process: any;
 
 const prisma = new PrismaClient();
 
