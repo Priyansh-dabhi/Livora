@@ -195,6 +195,33 @@ The installable release APK will be generated at:
 
 ---
 
+## 🐳 One-Command Setup (Docker Compose)
+
+Spin up PostgreSQL (port `5432`) and Mailpit mail catcher (SMTP `1025`, web UI `http://localhost:8025`) with one command:
+```bash
+docker compose up -d
+```
+
+---
+
+## 🧪 Automated Tests (Risky Logic)
+
+Livora includes automated test suites covering the core high-risk authentication and security rules:
+- **OTP Generation**: Verifying 6-digit numeric generation and cryptographic password/OTP hashing.
+- **OTP Expiry**: Verifying that challenges older than 10 minutes are rejected.
+- **Attempt Limits**: Enforcing lockouts after 5 consecutive failed attempts.
+- **Single-Use Rule**: Verifying that consumed OTP codes cannot be reused.
+- **Resend Cooldown**: Verifying the 30-second cooldown period.
+- **Login Rules**: Blocking unverified accounts and verifying JWT token generation.
+
+To run the test suite:
+```bash
+cd backend
+npm test
+```
+
+---
+
 ## 📡 Core API Endpoints
 
 | Method | Endpoint | Description | Auth Required |
@@ -206,11 +233,21 @@ The installable release APK will be generated at:
 | `POST` | `/api/v1/auth/login/verify-otp` | Verify login OTP & obtain JWT | No |
 | `GET` | `/api/v1/users/profile` | Retrieve the authenticated user's profile | Yes |
 | `PUT` | `/api/v1/users/profile` | Update user profile details (name, phone, address) | Yes |
+| `GET` | `/api/v1/tasks` | Get all tasks catalogue (23+ seeded tasks across 4 categories) | No |
+| `GET` | `/api/v1/tasks/categories` | Get categories with nested tasks | No |
+| `POST` | `/api/v1/tasks/select` | Save user's selected tasks | Yes |
+| `GET` | `/api/v1/tasks/selected` | Retrieve tasks picked by the user | Yes |
 | `POST` | `/api/v1/requests` | Create a new service request | Yes |
 | `GET` | `/api/v1/requests` | Fetch user's active and historical requests | Yes |
 
 ---
 
+## 📄 Design & Architecture Document
+
+See [DESIGN.md](DESIGN.md) for architectural trade-offs, scope decisions, rationale for optional business names, and future engineering milestones.
+
+---
+
 ## 🛡️ License
 
-This project is licensed under the MIT License — see the [LICENSE](LICENSE) file for details.
+This project is licensed under the MIT License.

@@ -22,6 +22,7 @@ model User {
 
   otpChallenges    OtpChallenge[]
   serviceRequests  ServiceRequest[]
+  taskSelections   UserTaskSelection[]
 
   @@index([email])
   @@map("users")
@@ -75,3 +76,45 @@ model ServiceRequest {
   @@index([userId])
   @@map("service_requests")
 }
+
+model Category {
+  id          String   @id @default(uuid())
+  slug        String   @unique
+  name        String
+  icon        String
+  description String
+  createdAt   DateTime @default(now())
+
+  tasks       Task[]
+
+  @@map("categories")
+}
+
+model Task {
+  id          String   @id @default(uuid())
+  categoryId  String
+  name        String
+  description String
+  createdAt   DateTime @default(now())
+
+  category        Category            @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  userSelections  UserTaskSelection[]
+
+  @@index([categoryId])
+  @@map("tasks")
+}
+
+model UserTaskSelection {
+  id        String   @id @default(uuid())
+  userId    String
+  taskId    String
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, taskId])
+  @@index([userId])
+  @@map("user_task_selections")
+}
+

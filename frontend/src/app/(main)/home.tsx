@@ -10,7 +10,7 @@
  * - Sticky Lifestyle Manager bar with WhatsApp chat deeplink
  */
 
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import {
   View,
   Text,
@@ -22,7 +22,7 @@ import {
   Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 
 import { colors, spacing, typography, radius, shadows } from '@/theme';
@@ -37,6 +37,7 @@ import {
   toggleHelpType,
 } from '@/store';
 import { SERVICE_CATEGORIES, ALL_FLATTENED_TASKS } from '@/constants/serviceCatalog';
+import { useGetUserRequestsQuery } from '@/services/requestsApi';
 
 function getTimeOfDayGreeting(): string {
   const hour = new Date().getHours();
@@ -54,6 +55,20 @@ export default function HomeScreen() {
   const { categories, tasks } = useAppSelector((state) => state.tasks);
 
   const [localSearch, setLocalSearch] = useState('');
+
+  const { data: requestsResponse, refetch: refetchRequests } = useGetUserRequestsQuery();
+
+  useFocusEffect(
+    useCallback(() => {
+      refetchRequests();
+    }, [refetchRequests])
+  );
+
+  const activeUserRequests = useMemo(() => {
+    return (requestsResponse?.data || []).filter(
+      (r) => r.status === 'in_progress' || r.status === 'pending'
+    );
+  }, [requestsResponse]);
 
   // Pre-load categories and tasks if empty
   useEffect(() => {
@@ -275,6 +290,56 @@ export default function HomeScreen() {
               </View>
             )}
           </View>
+
+          {/* Section: YOUR SELECTED TASKS */}
+          {activeUserRequests.length > 0 && (
+            <View style={styles.selectedTasksSection}>
+              <View style={styles.selectedHeaderRow}>
+                <Text style={styles.sectionHeaderLabel}>YOUR SELECTED TASKS</Text>
+                <TouchableOpacity
+                  onPress={() => router.push('/(main)/requests')}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                >
+                  <Text style={styles.viewAllRequestsText}>
+                    View all ({activeUserRequests.length}) →
+                  </Text>
+                </TouchableOpacity>
+              </View>
+
+              {activeUserRequests.slice(0, 3).map((req) => (
+                <TouchableOpacity
+                  key={req.id}
+                  style={styles.selectedTaskCard}
+                  activeOpacity={0.8}
+                  onPress={() => router.push('/(main)/requests')}
+                >
+                  <View style={styles.selectedTaskIconWrap}>
+                    <Feather
+                      name={
+                        (req.categoryIcon as keyof typeof Feather.glyphMap) ||
+                        'clipboard'
+                      }
+                      size={18}
+                      color={colors.primary}
+                    />
+                  </View>
+                  <View style={styles.selectedTaskInfo}>
+                    <Text style={styles.selectedTaskTitle}>
+                      {req.categoryName}
+                    </Text>
+                    <Text style={styles.selectedTaskActivities} numberOfLines={1}>
+                      {req.activities.join(' • ')}
+                    </Text>
+                  </View>
+                  <View style={styles.selectedTaskStatusBadge}>
+                    <Text style={styles.selectedTaskStatusText}>
+                      {req.status === 'in_progress' ? 'In Progress' : 'Pending'}
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
 
           {/* Section: POPULAR WITH FAMILIES LIKE YOURS */}
           <View style={styles.popularSection}>
@@ -750,5 +815,64 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
     color: colors.primary,
+  },
+  selectedTasksSection: {
+    marginBottom: 28,
+  },
+  selectedHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  viewAllRequestsText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: colors.primary,
+  },
+  selectedTaskCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.surface,
+    padding: 14,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    marginBottom: 10,
+    ...shadows.sm,
+  },
+  selectedTaskIconWrap: {
+    width: 38,
+    height: 38,
+    borderRadius: radius.sm,
+    backgroundColor: colors.highlightMint,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  selectedTaskInfo: {
+    flex: 1,
+    marginRight: 8,
+  },
+  selectedTaskTitle: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: colors.textPrimary,
+    marginBottom: 2,
+  },
+  selectedTaskActivities: {
+    fontSize: 12,
+    color: colors.textSecondary,
+  },
+  selectedTaskStatusBadge: {
+    backgroundColor: '#FEF3C7',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: radius.pill,
+  },
+  selectedTaskStatusText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#B45309',
   },
 });

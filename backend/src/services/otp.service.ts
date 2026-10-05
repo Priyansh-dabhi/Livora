@@ -48,7 +48,7 @@ export const verifyChallenge = async (userId: string, purpose: OtpPurpose, code:
     throw new ApiError(400, 'OTP expired');
   }
 
-  if (!config.isDevelopment && challenge.attempts >= challenge.maxAttempts) {
+  if (challenge.attempts >= challenge.maxAttempts) {
     throw new ApiError(400, 'Too many attempts');
   }
 
