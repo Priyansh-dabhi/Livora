@@ -10,7 +10,7 @@
  * - Celebratory completion state upon submission
  */
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -20,6 +20,7 @@ import {
   StyleSheet,
   Platform,
   BackHandler,
+  KeyboardAvoidingView,
 } from 'react-native';
 
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -43,6 +44,7 @@ import { useCreateRequestMutation } from '@/services/requestsApi';
 export default function TaskConfirmationScreen() {
   const router = useRouter();
   const dispatch = useAppDispatch();
+  const scrollViewRef = useRef<ScrollView>(null);
   const [createRequest] = useCreateRequestMutation();
 
   const {
@@ -240,138 +242,159 @@ export default function TaskConfirmationScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
-      <View style={styles.container}>
-        <ScrollView
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
-        >
-          {/* Top Bar: < Back link */}
-          <View style={styles.topNavRow}>
-            <TouchableOpacity
-              style={styles.backButton}
-              onPress={handleBack}
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-              accessibilityRole="button"
-              accessibilityLabel="Go back"
-            >
-              <Feather name="chevron-left" size={20} color={colors.primary} />
-              <Text style={styles.backButtonText}>Back</Text>
-            </TouchableOpacity>
-
-          </View>
-
-          {/* Category Badge */}
-          <View style={styles.badgeWrapper}>
-            <View style={styles.categoryBadge}>
-              <Feather
-                name={activeCategory?.icon as keyof typeof Feather.glyphMap}
-                size={14}
-                color={colors.primary}
-              />
-              <Text style={styles.categoryBadgeText}>
-                {activeCategory?.name}
-              </Text>
-            </View>
-          </View>
-
-          {/* Selected Activities Chips (if any selected) */}
-          {selectedActivityNames.length > 0 && (
-            <View style={styles.chipsScroll}>
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.chipsContent}
-              >
-                {selectedActivityNames.map((name, idx) => (
-                  <View key={idx} style={styles.selectionChip}>
-                    <Feather name="check" size={12} color={colors.primary} />
-                    <Text style={styles.selectionChipText}>{name}</Text>
-                  </View>
-                ))}
-              </ScrollView>
-            </View>
-          )}
-
-          {/* Heading & Subtitle */}
-          <Text style={styles.heading}>Tell us a little more</Text>
-          <Text style={styles.subtitle}>
-            One or two lines is enough. We'll take it from there.
-          </Text>
-
-          {/* Multiline Description Text Area */}
-          <View style={styles.textAreaContainer}>
-            <TextInput
-              style={styles.textAreaInput}
-              placeholder="e.g. AC in the guest room is leaking onto the floor"
-              placeholderTextColor={colors.textTertiary}
-              value={localDesc}
-              onChangeText={handleDescChange}
-              multiline
-              numberOfLines={4}
-              textAlignVertical="top"
-            />
-          </View>
-
-          {/* Conditional Scheduled Date & Time Fields */}
-          {isScheduled && (
-            <View style={styles.scheduledSection}>
-              {/* Date Input */}
-              <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>Date</Text>
-                <View style={styles.inputWrapper}>
-                  <Feather
-                    name="calendar"
-                    size={18}
-                    color={colors.textSecondary}
-                    style={styles.fieldIcon}
-                  />
-                  <TextInput
-                    style={styles.textInput}
-                    placeholder="DD/MM/YYYY"
-                    placeholderTextColor={colors.textTertiary}
-                    value={localDate}
-                    onChangeText={handleDateChange}
-                  />
-                </View>
-              </View>
-
-              {/* Time Input (24h) */}
-              <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>Time (24h)</Text>
-                <View style={styles.inputWrapper}>
-                  <Feather
-                    name="clock"
-                    size={18}
-                    color={colors.textSecondary}
-                    style={styles.fieldIcon}
-                  />
-                  <TextInput
-                    style={styles.textInput}
-                    placeholder="HH:MM"
-                    placeholderTextColor={colors.textTertiary}
-                    value={localTime}
-                    onChangeText={handleTimeChange}
-                  />
-                </View>
-              </View>
-            </View>
-          )}
-        </ScrollView>
-
-        {/* Sticky Leave it with us CTA Bar */}
-        <View style={styles.stickyBottomBar}>
-          <TouchableOpacity
-            style={styles.submitButton}
-            activeOpacity={0.85}
-            onPress={handleSubmit}
-            accessibilityRole="button"
-            accessibilityLabel="Leave it with us"
+      <KeyboardAvoidingView
+        style={styles.keyboardContainer}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
+        <View style={styles.container}>
+          <ScrollView
+            ref={scrollViewRef}
+            contentContainerStyle={styles.scrollContent}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+            automaticallyAdjustKeyboardInsets={true}
           >
-            <Text style={styles.submitButtonText}>Leave it with us</Text>
-          </TouchableOpacity>
+            {/* Top Bar: < Back link */}
+            <View style={styles.topNavRow}>
+              <TouchableOpacity
+                style={styles.backButton}
+                onPress={handleBack}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                accessibilityRole="button"
+                accessibilityLabel="Go back"
+              >
+                <Feather name="chevron-left" size={20} color={colors.primary} />
+                <Text style={styles.backButtonText}>Back</Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Category Badge */}
+            <View style={styles.badgeWrapper}>
+              <View style={styles.categoryBadge}>
+                <Feather
+                  name={activeCategory?.icon as keyof typeof Feather.glyphMap}
+                  size={14}
+                  color={colors.primary}
+                />
+                <Text style={styles.categoryBadgeText}>
+                  {activeCategory?.name}
+                </Text>
+              </View>
+            </View>
+
+            {/* Selected Activities Chips (if any selected) */}
+            {selectedActivityNames.length > 0 && (
+              <View style={styles.chipsScroll}>
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={styles.chipsContent}
+                >
+                  {selectedActivityNames.map((name, idx) => (
+                    <View key={idx} style={styles.selectionChip}>
+                      <Feather name="check" size={12} color={colors.primary} />
+                      <Text style={styles.selectionChipText}>{name}</Text>
+                    </View>
+                  ))}
+                </ScrollView>
+              </View>
+            )}
+
+            {/* Heading & Subtitle */}
+            <Text style={styles.heading}>Tell us a little more</Text>
+            <Text style={styles.subtitle}>
+              One or two lines is enough. We'll take it from there.
+            </Text>
+
+            {/* Multiline Description Text Area */}
+            <View style={styles.textAreaContainer}>
+              <TextInput
+                style={styles.textAreaInput}
+                placeholder="e.g. AC in the guest room is leaking onto the floor"
+                placeholderTextColor={colors.textTertiary}
+                value={localDesc}
+                onChangeText={handleDescChange}
+                onFocus={() => {
+                  setTimeout(() => {
+                    scrollViewRef.current?.scrollToEnd({ animated: true });
+                  }, 150);
+                }}
+                multiline
+                numberOfLines={4}
+                textAlignVertical="top"
+              />
+            </View>
+
+            {/* Conditional Scheduled Date & Time Fields */}
+            {isScheduled && (
+              <View style={styles.scheduledSection}>
+                {/* Date Input */}
+                <View style={styles.inputGroup}>
+                  <Text style={styles.inputLabel}>Date</Text>
+                  <View style={styles.inputWrapper}>
+                    <Feather
+                      name="calendar"
+                      size={18}
+                      color={colors.textSecondary}
+                      style={styles.fieldIcon}
+                    />
+                    <TextInput
+                      style={styles.textInput}
+                      placeholder="DD/MM/YYYY"
+                      placeholderTextColor={colors.textTertiary}
+                      value={localDate}
+                      onChangeText={handleDateChange}
+                      onFocus={() => {
+                        setTimeout(() => {
+                          scrollViewRef.current?.scrollToEnd({ animated: true });
+                        }, 150);
+                      }}
+                    />
+                  </View>
+                </View>
+
+                {/* Time Input (24h) */}
+                <View style={styles.inputGroup}>
+                  <Text style={styles.inputLabel}>Time (24h)</Text>
+                  <View style={styles.inputWrapper}>
+                    <Feather
+                      name="clock"
+                      size={18}
+                      color={colors.textSecondary}
+                      style={styles.fieldIcon}
+                    />
+                    <TextInput
+                      style={styles.textInput}
+                      placeholder="HH:MM"
+                      placeholderTextColor={colors.textTertiary}
+                      value={localTime}
+                      onChangeText={handleTimeChange}
+                      onFocus={() => {
+                        setTimeout(() => {
+                          scrollViewRef.current?.scrollToEnd({ animated: true });
+                        }, 150);
+                      }}
+                    />
+                  </View>
+                </View>
+              </View>
+            )}
+          </ScrollView>
+
+          {/* Sticky Leave it with us CTA Bar */}
+          <View style={styles.stickyBottomBar}>
+            <TouchableOpacity
+              style={styles.submitButton}
+              activeOpacity={0.85}
+              onPress={handleSubmit}
+              accessibilityRole="button"
+              accessibilityLabel="Leave it with us"
+            >
+              <Text style={styles.submitButtonText}>Leave it with us</Text>
+            </TouchableOpacity>
+          </View>
         </View>
-      </View>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
@@ -381,6 +404,9 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.background,
   },
+  keyboardContainer: {
+    flex: 1,
+  },
   container: {
     flex: 1,
     position: 'relative',
@@ -388,7 +414,7 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingHorizontal: 20,
     paddingTop: 10,
-    paddingBottom: 110,
+    paddingBottom: 160,
   },
   topNavRow: {
     flexDirection: 'row',

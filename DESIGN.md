@@ -1,6 +1,6 @@
 # Livora — Architecture & System Design (DESIGN.md)
 
-This document outlines the architecture, architectural trade-offs, scope decisions, and future roadmap for the **Livora** (PadosiPro Take-Home Assignment) full-stack platform.
+This document outlines the architecture, architectural trade-offs, system design decisions, and future engineering roadmap for the **Livora** full-stack concierge and household management platform.
 
 ---
 
@@ -50,10 +50,9 @@ This document outlines the architecture, architectural trade-offs, scope decisio
 
 ---
 
-## 3. Why Business Name is Optional
+## 3. Profile Schema: Why Business Name is Optional
 
-In Part A of the assignment:
-> *"Profile: save Name, Mobile Number (Indian, +91, 10 digits), Address and Business Name. Business Name may be optional; if you decide so, say why."*
+Livora profiles collect user information including Name, Mobile Number (+91, 10 digits), Address, and optional Business Name.
 
 **Design Decision**: `businessName` is strictly **optional**.
 - **Rationale**: Livora serves both **individual residential households** (who do not possess a commercial entity) and **home-office / enterprise professionals** who require concierge billing under a corporate name.
@@ -63,8 +62,7 @@ In Part A of the assignment:
 
 ## 4. Email & Mail Catcher Configuration
 
-In Part A of the assignment:
-> *"Send real email through SMTP, or a local mail catcher such as Mailpit or Ethereal; say which in your README."*
+Livora delivers authentication and verification OTP codes via SMTP or a local mail catcher:
 
 - **Development Default**: **Mailpit** (running via Docker on SMTP port `1025`, web UI on `http://localhost:8025`). This guarantees zero external dependencies and fast local testing without spamming real inboxes.
 - **Production Mode**: Configurable via standard SMTP environment variables (`SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`) supporting Gmail, AWS SES, or SendGrid.
@@ -72,17 +70,17 @@ In Part A of the assignment:
 
 ---
 
-## 5. What Was Left Out
+## 5. Architectural Boundaries & Scope
 
-1. **Payment Gateway Integration**: Actual online payments (Razorpay/Stripe) were omitted in favor of post-service concierge reconciliation, aligning with the real PadosiPro pilot model where the Lifestyle Manager coordinates vendor quotes.
-2. **Real-Time Geolocation Tracking on Map**: Task tracking uses structured milestones (`pending` → `in_progress` → `completed`) rather than live GPS driver tracking, matching household errand services.
-3. **In-App WebSockets**: State synchronization utilizes RTK Query optimistic updates and focus-based invalidation rather than standing WebSocket connections to conserve mobile battery life.
+1. **Payment Gateway Integration**: Online payments (Razorpay/Stripe) are designed for post-service concierge reconciliation, aligning with the Livora pilot concierge model where the Lifestyle Manager coordinates vendor quotes.
+2. **Milestone Tracking**: Task tracking uses structured lifecycle milestones (`pending` → `in_progress` → `completed`) rather than raw GPS driver coordinates, matching personal household errand services.
+3. **State Synchronization**: Client-server state synchronization utilizes RTK Query optimistic updates and focus-based invalidation rather than standing WebSocket connections to conserve mobile battery life.
 
 ---
 
-## 6. What Would Be Done Next With Another Week
+## 6. Future Engineering Roadmap
 
-1. **Native In-App Concierge Chat**: Replace the WhatsApp deeplink with an embedded, real-time WebSocket chat interface between the household and their assigned Lifestyle Manager.
+1. **Native In-App Concierge Chat**: Transition from WhatsApp deeplinks to an embedded, real-time WebSocket chat interface between households and their assigned Lifestyle Manager.
 2. **Push Notifications**: Integrate Expo Notifications for instant mobile alerts when a technician arrives or an errand is completed.
 3. **Recurring Task Subscriptions**: Enable recurring schedules (e.g., weekly elderly wellness check-in, bi-weekly deep cleaning) with automated task generation.
 4. **Media Attachments**: Allow users to snap photos of broken appliances or prescription slips directly in the booking flow and upload to S3/Cloudinary.

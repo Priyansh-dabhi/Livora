@@ -1,12 +1,12 @@
 /**
- * Livora Home Screen (PadosiPro Replica)
+ * Livora Home Screen
  *
  * Faithfully reproduces the home dashboard UI:
  * - Dynamic greeting with user profile icon
  * - "What do you need help with?" search prompt
  * - "POPULAR WITH FAMILIES LIKE YOURS" category pills
  * - "Browse everything we do →" link
- * - "HOW PADOSIPRO WORKS" 3-step feature explanation
+ * - "HOW LIVORA WORKS" 3-step feature explanation
  * - Sticky Lifestyle Manager bar with WhatsApp chat deeplink
  */
 
@@ -467,9 +467,9 @@ export default function HomeScreen() {
             </TouchableOpacity>
           </View>
 
-          {/* Section: HOW PADOSIPRO WORKS */}
+          {/* Section: HOW LIVORA WORKS */}
           <View style={styles.howItWorksSection}>
-            <Text style={styles.sectionHeaderLabel}>HOW PADOSIPRO WORKS</Text>
+            <Text style={styles.sectionHeaderLabel}>HOW LIVORA WORKS</Text>
 
             {/* Step 1 */}
             <View style={styles.stepItem}>

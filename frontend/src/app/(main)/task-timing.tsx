@@ -1,7 +1,7 @@
 /**
  * Service Timing Screen ("When do you need this?")
  *
- * Exact replica of the PadosiPro timing selection screen:
+ * Livora service timing selection screen:
  * - "< Back" green navigation link
  * - "When do you need this?" headline
  * - "Pick what feels closest. You can always add detail next." subtitle
