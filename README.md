@@ -166,7 +166,8 @@ Livora/
 
 4. Start the Expo development server:
    ```bash
-   npx expo start
+   npm run dev
+   # or: npx expo start
    ```
 
 5. Run on your preferred platform:
@@ -204,6 +205,39 @@ Spin up PostgreSQL (port `5432`) and Mailpit mail catcher (SMTP `1025`, web UI `
 ```bash
 docker compose up -d
 ```
+
+---
+
+## 📧 Testing Email OTP Delivery
+
+Livora supports two modes for receiving actual 6-digit OTP verification codes:
+
+### Option 1: Local Mail Catcher (Mailpit) — *Recommended & Zero-Config*
+When running Docker Compose, Mailpit is running locally by default.
+1. Ensure `backend/.env` has:
+   ```env
+   SMTP_HOST=localhost
+   SMTP_PORT=1025
+   ```
+2. Open your web browser to the Mailpit inbox:
+   👉 **http://localhost:8025**
+3. Whenever you register or log in within the mobile app, the email with the 6-digit code will appear in the Mailpit inbox immediately.
+
+### Option 2: Live Delivery to a Real Gmail Inbox
+To have verification emails land directly in your real Gmail inbox:
+1. Generate a 16-character [Google App Password](https://myaccount.google.com/apppasswords) (under Google Account → Security → 2-Step Verification → App passwords).
+2. Configure `backend/.env`:
+   ```env
+   SMTP_HOST=smtp.gmail.com
+   SMTP_PORT=587
+   SMTP_USER=your_email@gmail.com
+   SMTP_PASSWORD=your_16_char_app_password
+   SMTP_FROM="Livora Concierge <your_email@gmail.com>"
+   ```
+3. Restart the backend server (`npm run dev`).
+4. Trigger registration or login in the mobile app using any real email address. The OTP will arrive in your Gmail inbox (check Spam if testing for the first time).
+
+> **Developer Note**: In development mode, the generated OTP is also printed in the backend terminal console, and the master code `123456` is always accepted for rapid testing.
 
 ---
 
