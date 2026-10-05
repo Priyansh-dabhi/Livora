@@ -39,14 +39,9 @@ export default function Index() {
 
   // 3. Verified but incomplete profile
   if (!isProfileComplete) {
-    return <Redirect href="/(onboarding)/profile" />;
+    return <Redirect href="/(onboarding)/profile-details" />;
   }
 
-  // 4. Completed profile but no tasks selected
-  if (selectedTaskIds.length === 0) {
-    return <Redirect href="/(main)/tasks" />;
-  }
-
-  // 5. Complete state: verified, profile done, tasks selected
+  // 4. Complete state: verified, profile completed -> Home
   return <Redirect href="/(main)/home" />;
 }

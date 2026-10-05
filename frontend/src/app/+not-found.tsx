@@ -31,7 +31,7 @@ export default function NotFoundScreen() {
           onPress={() => router.replace('/')}
           activeOpacity={0.8}
         >
-          <Feather name="home" size={18} color="#FFFFFF" />
+          <Feather name="home" size={18} color={colors.white} />
           <Text style={styles.buttonText}>Return to Livora</Text>
         </TouchableOpacity>
       </View>
@@ -84,6 +84,6 @@ const styles = StyleSheet.create({
   },
   buttonText: {
     ...typography.button,
-    color: '#FFFFFF',
+    color: colors.textOnPrimary,
   },
 });

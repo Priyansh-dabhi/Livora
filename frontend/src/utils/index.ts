@@ -24,3 +24,5 @@ export {
   saveSelectedTaskIds,
   getSelectedTaskIds,
 } from './storage';
+
+export { extractErrorMessage } from './apiError';

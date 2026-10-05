@@ -1,5 +1,5 @@
 /**
- * Profile Setup Screen
+ * Profile Details Setup Screen
  *
  * First-login onboarding: collects Name, Indian Mobile (+91),
  * detailed Address, and optional Business Name.
@@ -41,7 +41,7 @@ import {
   completeOnboarding,
   logout,
 } from '@/store';
-import { saveProfile as mockSaveProfile } from '@/services/mockProfileService';
+import { useUpdateProfileMutation } from '@/services/userApi';
 import {
   saveProfileData,
   saveOnboardingComplete,
@@ -49,23 +49,19 @@ import {
   clearSession,
 } from '@/utils/storage';
 
-const DEMO_PROFILE = {
-  name: 'Aarav Sharma',
-  mobileNumber: '9876543210',
-  address: 'Flat 402, Green Meadows, 12th Main, Indiranagar, Bengaluru, Karnataka 560038',
-  businessName: 'Sharma & Co. Living',
-};
-
-export default function ProfileScreen() {
+export default function ProfileDetailsScreen() {
   const router = useRouter();
   const dispatch = useAppDispatch();
   const { user, token } = useAppSelector((state) => state.auth);
-  const { isLoading } = useAppSelector((state) => state.profile);
+  const { isLoading: isProfileLoading } = useAppSelector((state) => state.profile);
+
+  const [updateProfile, { isLoading: isUpdating }] = useUpdateProfileMutation();
+  const isLoading = isProfileLoading || isUpdating;
 
   const [formError, setFormError] = useState<string | null>(null);
 
   const nameField = useFormField({
-    initialValue: '',
+    initialValue: user?.name || '',
     validate: (val) => {
       if (!val.trim()) return 'Full name is required';
       if (!isValidName(val)) return 'Please enter a valid name (at least 2 letters, alphabetic only)';
@@ -74,7 +70,7 @@ export default function ProfileScreen() {
   });
 
   const mobileField = useFormField({
-    initialValue: '',
+    initialValue: user?.phone || '',
     validate: (val) => {
       const cleaned = val.replace(/\s/g, '');
       if (!cleaned) return 'Mobile number is required';
@@ -99,14 +95,6 @@ export default function ProfileScreen() {
   const businessField = useFormField({
     initialValue: '',
   });
-
-  const handleAutofillDemo = () => {
-    nameField.setValue(DEMO_PROFILE.name);
-    mobileField.setValue(DEMO_PROFILE.mobileNumber);
-    addressField.setValue(DEMO_PROFILE.address);
-    businessField.setValue(DEMO_PROFILE.businessName);
-    setFormError(null);
-  };
 
   const handleSignOutPrompt = () => {
     Alert.alert(
@@ -148,7 +136,8 @@ export default function ProfileScreen() {
         businessName: businessField.value.trim() || undefined,
       };
 
-      const savedProfile = await mockSaveProfile(payload);
+      const result = await updateProfile(payload).unwrap();
+      const savedProfile = result.data;
 
       // 1. Update Redux store
       dispatch(setProfile(savedProfile));
@@ -162,14 +151,18 @@ export default function ProfileScreen() {
       if (token && user) {
         await saveSession(token, {
           ...user,
+          name: savedProfile.name,
+          phone: savedProfile.mobileNumber,
           isProfileComplete: true,
         });
       }
 
-      // 3. Navigate to task discovery
-      router.replace('/(main)/tasks');
+      // 3. Navigate to Home dashboard
+      router.replace('/(main)/home');
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Failed to save profile. Please try again.';
+      const message =
+        (err as any)?.data?.message ||
+        (err instanceof Error ? err.message : 'Failed to save profile. Please try again.');
       dispatch(setProfileError(message));
       setFormError(message);
     } finally {
@@ -180,8 +173,8 @@ export default function ProfileScreen() {
   return (
     <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
       <Header
-        title="Profile Setup"
-        subtitle="Step 1 of 2: Personal Details"
+        title="Profile Details"
+        subtitle="Personal Details"
         rightAction={
           <TouchableOpacity
             onPress={handleSignOutPrompt}
@@ -205,26 +198,6 @@ export default function ProfileScreen() {
             Add your primary contact and location details to help us customize your household tasks.
           </Text>
         </View>
-
-        {/* Demo Quickfill Card */}
-        <TouchableOpacity
-          style={styles.demoCard}
-          onPress={handleAutofillDemo}
-          activeOpacity={0.8}
-          accessibilityRole="button"
-          accessibilityLabel="Autofill demo profile information"
-        >
-          <View style={styles.demoBadge}>
-            <Feather name="zap" size={14} color={colors.primary} />
-          </View>
-          <View style={styles.demoTextContainer}>
-            <Text style={styles.demoTitle}>Quick Demo Profile</Text>
-            <Text style={styles.demoSubtitle}>
-              Tap to autofill demo name, Indian mobile, and address
-            </Text>
-          </View>
-          <Feather name="arrow-right" size={16} color={colors.primary} />
-        </TouchableOpacity>
 
         {/* Error Banner */}
         {formError && (
@@ -284,7 +257,7 @@ export default function ProfileScreen() {
           {/* Business / Company Name (Optional) */}
           <Input
             label="Business Name (Optional)"
-            placeholder="e.g. Acme Corp (if delegating for work)"
+            placeholder="e.g. Acme Corp"
             value={businessField.value}
             onChangeText={businessField.setValue}
             leftIcon="briefcase"
@@ -342,36 +315,7 @@ const styles = StyleSheet.create({
     ...typography.body,
     color: colors.textSecondary,
     lineHeight: 22,
-  },
-  demoCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.highlightMint,
-    borderWidth: 1,
-    borderColor: colors.primaryLight,
-    borderRadius: radius.md,
-    padding: spacing.md,
     marginBottom: spacing.xl,
-    gap: spacing.sm,
-  },
-  demoBadge: {
-    width: 28,
-    height: 28,
-    borderRadius: radius.sm,
-    backgroundColor: colors.white,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  demoTextContainer: {
-    flex: 1,
-  },
-  demoTitle: {
-    ...typography.captionMedium,
-    color: colors.primary,
-  },
-  demoSubtitle: {
-    ...typography.caption,
-    color: colors.textSecondary,
   },
   errorBanner: {
     flexDirection: 'row',

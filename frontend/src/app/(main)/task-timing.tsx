@@ -10,7 +10,7 @@
  * - Sticky dark green "Next" button
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -18,6 +18,7 @@ import {
   TouchableOpacity,
   StyleSheet,
   Platform,
+  BackHandler,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -70,6 +71,24 @@ export default function TaskTimingScreen() {
   );
   const [selectedId, setSelectedId] = useState<TimingOptionId>(currentTiming);
 
+  const handleBack = useCallback(() => {
+    router.replace('/(main)/tasks');
+  }, [router]);
+
+  useEffect(() => {
+    const onBackPress = () => {
+      handleBack();
+      return true;
+    };
+
+    const subscription = BackHandler.addEventListener(
+      'hardwareBackPress',
+      onBackPress
+    );
+
+    return () => subscription.remove();
+  }, [handleBack]);
+
   const handleSelectTiming = (id: TimingOptionId) => {
     setSelectedId(id);
     dispatch(setSelectedTiming(id));
@@ -91,7 +110,7 @@ export default function TaskTimingScreen() {
           <View style={styles.topNavRow}>
             <TouchableOpacity
               style={styles.backButton}
-              onPress={() => router.back()}
+              onPress={handleBack}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
               accessibilityRole="button"
               accessibilityLabel="Go back"
@@ -177,7 +196,7 @@ export default function TaskTimingScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#FAF9F7',
+    backgroundColor: colors.background,
   },
   container: {
     flex: 1,
@@ -209,13 +228,13 @@ const styles = StyleSheet.create({
   heading: {
     fontSize: 26,
     fontWeight: '700',
-    color: '#1A1D2B',
+    color: colors.textPrimary,
     letterSpacing: -0.5,
     marginBottom: 10,
   },
   subtitle: {
     fontSize: 15,
-    color: '#6B7280',
+    color: colors.textSecondary,
     lineHeight: 22,
     marginBottom: 24,
   },
@@ -233,11 +252,11 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   optionCardUnselected: {
-    backgroundColor: '#FFFFFF',
-    borderColor: '#E5E7EB',
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
   },
   optionCardSelected: {
-    backgroundColor: '#F0FAF5',
+    backgroundColor: colors.highlightMint,
     borderColor: colors.primary,
   },
   accentStripe: {
@@ -246,7 +265,7 @@ const styles = StyleSheet.create({
     top: 0,
     bottom: 0,
     width: 5,
-    backgroundColor: '#E2A93B', // Golden accent stripe from screenshot
+    backgroundColor: colors.accent, // Golden accent stripe
     zIndex: 2,
   },
   iconContainer: {
@@ -261,27 +280,27 @@ const styles = StyleSheet.create({
   optionTitle: {
     fontSize: 17,
     fontWeight: '700',
-    color: '#1A1D2B',
+    color: colors.textPrimary,
     marginBottom: 3,
   },
   optionTitleSelected: {
-    color: '#1A1D2B',
+    color: colors.textPrimary,
   },
   optionSubtitle: {
     fontSize: 14,
-    color: '#6B7280',
+    color: colors.textSecondary,
   },
   stickyBottomBar: {
     position: 'absolute',
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: '#FAF9F7',
+    backgroundColor: colors.background,
     paddingHorizontal: 20,
     paddingTop: 12,
     paddingBottom: Platform.OS === 'ios' ? 24 : 16,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(229, 231, 235, 0.5)',
+    borderTopColor: colors.border,
   },
   nextButton: {
     backgroundColor: colors.primary,
@@ -292,7 +311,7 @@ const styles = StyleSheet.create({
     ...shadows.sm,
   },
   nextButtonText: {
-    color: '#FFFFFF',
+    color: colors.textOnPrimary,
     fontSize: 16,
     fontWeight: '700',
   },

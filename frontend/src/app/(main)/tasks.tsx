@@ -10,7 +10,7 @@
  * Sticky "Continue" button allows proceeding with category only or any combination of selections.
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -19,6 +19,7 @@ import {
   StyleSheet,
   Platform,
   Alert,
+  BackHandler,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -57,10 +58,42 @@ export default function TasksScreen() {
   const isCategoryComingSoon = !!activeCategory?.isComingSoon;
   const isContinueDisabled = !activeCategoryId || isCategoryComingSoon;
 
-  // Set of expanded help type IDs for accordion toggle
-  const [expandedHelpTypeIds, setExpandedHelpTypeIds] = useState<string[]>([
-    'help-pickups', // first help type open by default for rich visual showcase
-  ]);
+  const handleBack = useCallback(() => {
+    router.replace('/(main)/home');
+  }, [router]);
+
+  useEffect(() => {
+    const onBackPress = () => {
+      handleBack();
+      return true;
+    };
+
+    const subscription = BackHandler.addEventListener(
+      'hardwareBackPress',
+      onBackPress
+    );
+
+    return () => subscription.remove();
+  }, [handleBack]);
+
+  // Set of expanded help type IDs for accordion toggle (auto-expand any that have selected activities)
+  const [expandedHelpTypeIds, setExpandedHelpTypeIds] = useState<string[]>(() => {
+    const initial: string[] = [];
+    if (activeCategory) {
+      activeCategory.helpTypes.forEach((ht: HelpType) => {
+        if (
+          ht.activities.some((act: DetailedActivity) =>
+            selectedActivityIds.includes(act.id)
+          ) ||
+          selectedHelpTypeIds.includes(ht.id)
+        ) {
+          initial.push(ht.id);
+        }
+      });
+    }
+    return initial;
+  });
+
 
   const handleToggleCategory = (catId: string) => {
     if (activeCategoryId === catId) {
@@ -126,8 +159,11 @@ export default function TasksScreen() {
       return;
     }
 
-    // Category is already selected; navigate to "When do you need this?"
-    router.push('/(main)/task-timing');
+    if (!completeCategoryAssistance && (selectedActivityIds.length + selectedHelpTypeIds.length > 1)) {
+      router.push('/(main)/task-multi-details');
+    } else {
+      router.push('/(main)/task-timing');
+    }
   };
 
   return (
@@ -141,7 +177,7 @@ export default function TasksScreen() {
           <View style={styles.topNavRow}>
             <TouchableOpacity
               style={styles.backButton}
-              onPress={() => router.back()}
+              onPress={handleBack}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
               accessibilityRole="button"
               accessibilityLabel="Go back"
@@ -149,6 +185,7 @@ export default function TasksScreen() {
               <Feather name="chevron-left" size={20} color={colors.primary} />
               <Text style={styles.backButtonText}>Back</Text>
             </TouchableOpacity>
+
           </View>
 
           {/* Heading & Subtitle */}
@@ -560,7 +597,7 @@ export default function TasksScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#FAF9F7',
+    backgroundColor: colors.background,
   },
   container: {
     flex: 1,
@@ -593,13 +630,13 @@ const styles = StyleSheet.create({
   heading: {
     fontSize: 26,
     fontWeight: '700',
-    color: '#1A1D2B',
+    color: colors.textPrimary,
     letterSpacing: -0.5,
     marginBottom: 8,
   },
   subtitle: {
     fontSize: 15,
-    color: '#6B7280',
+    color: colors.textSecondary,
     lineHeight: 22,
     marginBottom: 24,
   },
@@ -609,15 +646,15 @@ const styles = StyleSheet.create({
   categoryCardCollapsed: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderColor: '#E5E7EB',
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
     borderWidth: 1,
     borderRadius: 16,
     padding: 16,
     gap: 14,
   },
   categoryCardExpanded: {
-    backgroundColor: '#F0FAF5',
+    backgroundColor: colors.highlightMint,
     borderColor: colors.primary,
     borderWidth: 1.5,
     borderRadius: 16,
@@ -631,7 +668,7 @@ const styles = StyleSheet.create({
     top: 0,
     bottom: 0,
     width: 5,
-    backgroundColor: '#E2A93B',
+    backgroundColor: colors.accent,
     zIndex: 2,
   },
   categoryHeader: {
@@ -664,7 +701,7 @@ const styles = StyleSheet.create({
   categoryTitle: {
     fontSize: 17,
     fontWeight: '700',
-    color: '#1A1D2B',
+    color: colors.textPrimary,
     marginBottom: 3,
     flexShrink: 1,
   },
@@ -680,25 +717,25 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   comingSoonBadge: {
-    backgroundColor: '#FEF3C7',
+    backgroundColor: colors.warningLight,
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: 6,
     borderWidth: 1,
-    borderColor: '#FDE68A',
+    borderColor: colors.warning,
   },
   comingSoonBadgeText: {
     fontSize: 11,
     fontWeight: '700',
-    color: '#92400E',
+    color: colors.textPrimary,
     letterSpacing: 0.2,
   },
   comingSoonBanner: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFBEB',
+    backgroundColor: colors.warningLight,
     borderWidth: 1,
-    borderColor: '#FDE68A',
+    borderColor: colors.warning,
     borderRadius: 10,
     paddingHorizontal: 12,
     paddingVertical: 10,
@@ -711,13 +748,13 @@ const styles = StyleSheet.create({
   comingSoonBannerText: {
     flex: 1,
     fontSize: 13,
-    color: '#92400E',
+    color: colors.textPrimary,
     lineHeight: 18,
     fontWeight: '500',
   },
   categoryDesc: {
     fontSize: 14,
-    color: '#6B7280',
+    color: colors.textSecondary,
     lineHeight: 20,
   },
   completeAssistanceContainer: {
@@ -728,24 +765,24 @@ const styles = StyleSheet.create({
   completeAssistanceCard: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: colors.border,
     borderRadius: 12,
     padding: 14,
     gap: 12,
   },
   completeAssistanceCardActive: {
     borderColor: colors.primary,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.surface,
   },
   customCheckbox: {
     width: 22,
     height: 22,
     borderRadius: 6,
     borderWidth: 1.5,
-    borderColor: '#D1D5DB',
-    backgroundColor: '#FFFFFF',
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 1,
@@ -769,8 +806,8 @@ const styles = StyleSheet.create({
     height: 18,
     borderRadius: 5,
     borderWidth: 1.5,
-    borderColor: '#D1D5DB',
-    backgroundColor: '#FFFFFF',
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 2,
@@ -787,12 +824,12 @@ const styles = StyleSheet.create({
   completeAssistanceTitle: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#1A1D2B',
+    color: colors.textPrimary,
     marginBottom: 3,
   },
   completeAssistanceDesc: {
     fontSize: 13,
-    color: '#6B7280',
+    color: colors.textSecondary,
     lineHeight: 18,
   },
   helpTypesSection: {
@@ -802,7 +839,7 @@ const styles = StyleSheet.create({
   sectionHeaderLabel: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#5A6B7A',
+    color: colors.textSecondary,
     letterSpacing: 0.8,
     marginBottom: 12,
   },
@@ -810,14 +847,14 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   helpTypeCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: colors.border,
     borderRadius: 12,
     overflow: 'hidden',
   },
   helpTypeCardActive: {
-    borderColor: '#D1D5DB',
+    borderColor: colors.border,
   },
   helpTypeHeaderRow: {
     flexDirection: 'row',
@@ -834,11 +871,11 @@ const styles = StyleSheet.create({
   helpTypeTitle: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#1A1D2B',
+    color: colors.textPrimary,
   },
   helpTypePreview: {
     fontSize: 13,
-    color: '#6B7280',
+    color: colors.textSecondary,
     marginTop: 2,
   },
   chevronButton: {
@@ -850,7 +887,7 @@ const styles = StyleSheet.create({
   },
   activitiesDivider: {
     height: 1,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: colors.surfaceElevated,
     marginBottom: 10,
   },
   selectAllRow: {
@@ -859,14 +896,14 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     paddingHorizontal: 4,
     gap: 10,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: colors.surfaceElevated,
     borderRadius: 8,
     marginBottom: 8,
   },
   selectAllLabel: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#1A1D2B',
+    color: colors.textPrimary,
     flex: 1,
   },
   activityCounter: {
@@ -891,12 +928,12 @@ const styles = StyleSheet.create({
   activityName: {
     fontSize: 14,
     fontWeight: '500',
-    color: '#1A1D2B',
+    color: colors.textPrimary,
     lineHeight: 20,
   },
   activityDescription: {
     fontSize: 12,
-    color: '#6B7280',
+    color: colors.textSecondary,
     marginTop: 1,
     lineHeight: 16,
   },
@@ -905,12 +942,12 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: '#FAF9F7',
+    backgroundColor: colors.background,
     paddingHorizontal: 20,
     paddingTop: 12,
     paddingBottom: Platform.OS === 'ios' ? 24 : 16,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(229, 231, 235, 0.6)',
+    borderTopColor: colors.border,
   },
   continueButton: {
     backgroundColor: colors.primary,
@@ -921,18 +958,18 @@ const styles = StyleSheet.create({
     ...shadows.sm,
   },
   continueButtonText: {
-    color: '#FFFFFF',
+    color: colors.textOnPrimary,
     fontSize: 16,
     fontWeight: '700',
   },
   continueButtonDisabled: {
-    backgroundColor: '#E5E7EB',
-    borderColor: '#D1D5DB',
+    backgroundColor: colors.disabled,
+    borderColor: colors.disabled,
     borderWidth: 1,
     shadowOpacity: 0,
     elevation: 0,
   },
   continueButtonTextDisabled: {
-    color: '#9CA3AF',
+    color: colors.disabledText,
   },
 });

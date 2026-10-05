@@ -28,14 +28,12 @@ import {
   isValidEmail,
   isValidPassword,
 } from '@/utils/validation';
+import { extractErrorMessage } from '@/utils';
 import {
   useAppDispatch,
-  useAppSelector,
   registerSuccess,
-  setAuthLoading,
-  setAuthError,
 } from '@/store';
-import { register as mockRegister } from '@/services/mockAuthService';
+import { useRegisterMutation } from '@/services/authApi';
 
 interface PasswordRule {
   label: string;
@@ -52,7 +50,7 @@ const PASSWORD_RULES: PasswordRule[] = [
 export default function RegisterScreen() {
   const router = useRouter();
   const dispatch = useAppDispatch();
-  const { isLoading } = useAppSelector((state) => state.auth);
+  const [register, { isLoading }] = useRegisterMutation();
 
   const [formError, setFormError] = useState<string | null>(null);
 
@@ -94,14 +92,20 @@ export default function RegisterScreen() {
       return;
     }
 
-    dispatch(setAuthLoading(true));
-
     try {
-      const user = await mockRegister({
+      const result = await register({
         email: emailField.value.trim(),
         password: passwordField.value,
         confirmPassword: confirmPasswordField.value,
-      });
+      }).unwrap();
+
+      const user = {
+        id: result.data.id,
+        email: result.data.email,
+        createdAt: (result.data as any).createdAt || new Date().toISOString(),
+        isVerified: false,
+        isProfileComplete: false,
+      };
 
       dispatch(registerSuccess({ user }));
 
@@ -110,12 +114,10 @@ export default function RegisterScreen() {
         pathname: '/(auth)/verify-email',
         params: { email: user.email },
       });
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Registration failed';
-      dispatch(setAuthError(message));
+    } catch (err: any) {
+      console.error('[Register Error]:', err);
+      const message = extractErrorMessage(err, 'Registration failed');
       setFormError(message);
-    } finally {
-      dispatch(setAuthLoading(false));
     }
   };
 

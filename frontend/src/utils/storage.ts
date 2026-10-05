@@ -7,7 +7,7 @@
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as SecureStore from 'expo-secure-store';
-import type { User, Profile } from '@/types';
+import type { User, Profile, ServiceRequest } from '@/types';
 
 // ── Storage Keys ─────────────────────────────────────────
 const KEYS = {
@@ -17,7 +17,9 @@ const KEYS = {
   ONBOARDING_COMPLETE: 'livora_onboarding_complete',
   SELECTED_TASKS: 'livora_selected_tasks',
   WELCOME_SEEN: 'livora_welcome_seen',
+  SERVICE_REQUESTS: 'livora_service_requests',
 } as const;
+
 
 // ── Session (Secure) ────────────────────────────────────
 
@@ -46,6 +48,7 @@ export async function clearSession(): Promise<void> {
     KEYS.PROFILE,
     KEYS.ONBOARDING_COMPLETE,
     KEYS.SELECTED_TASKS,
+    KEYS.SERVICE_REQUESTS,
   ]);
 }
 
@@ -84,6 +87,22 @@ export async function getSelectedTaskIds(): Promise<string[]> {
   return json ? (JSON.parse(json) as string[]) : [];
 }
 
+// ── Service Requests ─────────────────────────────────────
+
+export async function saveServiceRequests(requests: ServiceRequest[]): Promise<void> {
+  await AsyncStorage.setItem(KEYS.SERVICE_REQUESTS, JSON.stringify(requests));
+}
+
+export async function getServiceRequests(): Promise<ServiceRequest[]> {
+  const json = await AsyncStorage.getItem(KEYS.SERVICE_REQUESTS);
+  return json ? (JSON.parse(json) as ServiceRequest[]) : [];
+}
+
+export async function addServiceRequest(request: ServiceRequest): Promise<void> {
+  const existing = await getServiceRequests();
+  await saveServiceRequests([request, ...existing]);
+}
+
 // ── Welcome / First Launch ───────────────────────────────
 
 export async function saveWelcomeSeen(): Promise<void> {
@@ -94,3 +113,4 @@ export async function getWelcomeSeen(): Promise<boolean> {
   const value = await AsyncStorage.getItem(KEYS.WELCOME_SEEN);
   return value ? (JSON.parse(value) as boolean) : false;
 }
+

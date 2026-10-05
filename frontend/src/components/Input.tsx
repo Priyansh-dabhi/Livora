@@ -11,6 +11,7 @@ import {
   TextInput,
   TouchableOpacity,
   StyleSheet,
+  Platform,
   type TextInputProps,
   type ViewStyle,
 } from 'react-native';
@@ -73,7 +74,7 @@ export const Input = forwardRef<TextInput, InputProps>(function Input(
             name={leftIcon}
             size={18}
             color={hasError ? colors.error : isFocused ? colors.primary : colors.textTertiary}
-            style={styles.leftIcon}
+            style={[styles.leftIcon, multiline && styles.leftIconMultiline]}
           />
         )}
 
@@ -97,6 +98,7 @@ export const Input = forwardRef<TextInput, InputProps>(function Input(
           selectionColor={colors.primary}
           secureTextEntry={isSecure}
           multiline={multiline}
+          numberOfLines={multiline ? (textInputProps.numberOfLines ?? 3) : 1}
           textAlignVertical={multiline ? 'top' : 'center'}
           onFocus={(e) => {
             setIsFocused(true);
@@ -187,13 +189,14 @@ const styles = StyleSheet.create({
     ...typography.input,
     color: colors.textPrimary,
     paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
+    paddingVertical: Platform.OS === 'android' ? 10 : spacing.md,
   },
   textAreaInput: {
     paddingTop: spacing.md,
+    paddingBottom: spacing.md,
   },
   inputWithLeftIcon: {
-    paddingLeft: spacing.xs,
+    paddingLeft: spacing.sm,
   },
   inputWithPrefix: {
     paddingLeft: spacing.xs,
@@ -220,6 +223,9 @@ const styles = StyleSheet.create({
   },
   leftIcon: {
     marginLeft: spacing.lg,
+  },
+  leftIconMultiline: {
+    marginTop: Platform.OS === 'android' ? 17 : 16,
   },
   rightIconButton: {
     padding: spacing.md,

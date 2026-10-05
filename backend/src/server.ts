@@ -1,7 +1,7 @@
 import app from './app';
 import config from './config';
 
-const server = app.listen(config.port, () => {
+const server = app.listen(config.port, '0.0.0.0', () => {
   console.log('==============================================');
   console.log(`🚀 Livora Backend running on port ${config.port}`);
   console.log(`📡 Environment: ${config.nodeEnv}`);

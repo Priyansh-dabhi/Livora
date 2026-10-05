@@ -9,7 +9,7 @@ export const register = async (req: Request, res: Response) => {
 
 export const verifyEmail = async (req: Request, res: Response) => {
   const result = await authService.verifyEmail(req.body);
-  sendResponse(res, 200, result.message);
+  sendResponse(res, 200, result.message, result);
 };
 
 export const resendEmailOtp = async (req: Request, res: Response) => {

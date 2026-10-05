@@ -12,12 +12,13 @@ import { SERVICE_CATEGORIES, ALL_FLATTENED_TASKS } from '@/constants/serviceCata
 const initialState: TasksState = {
   categories: SERVICE_CATEGORIES,
   tasks: ALL_FLATTENED_TASKS,
-  selectedCategoryId: 'cat-errands',
+  selectedCategoryId: null,
   completeCategoryAssistance: false,
   selectedHelpTypeIds: [],
   selectedActivityIds: [],
   selectedTiming: 'standard',
   description: '',
+  multiDescriptions: {},
   scheduledDate: '',
   scheduledTime: '',
   selectedTaskIds: [],
@@ -175,12 +176,20 @@ const tasksSlice = createSlice({
       state.selectedTaskIds = [];
     },
 
+    setMultiDescription(
+      state,
+      action: PayloadAction<{ id: string; description: string }>
+    ) {
+      state.multiDescriptions[action.payload.id] = action.payload.description;
+    },
+
     resetRequest(state) {
       state.completeCategoryAssistance = false;
       state.selectedHelpTypeIds = [];
       state.selectedActivityIds = [];
       state.selectedTiming = 'standard';
       state.description = '';
+      state.multiDescriptions = {};
       state.scheduledDate = '';
       state.scheduledTime = '';
       state.selectedTaskIds = [];
@@ -195,6 +204,7 @@ const tasksSlice = createSlice({
       state.selectedActivityIds = [];
       state.selectedTiming = 'standard';
       state.description = '';
+      state.multiDescriptions = {};
       state.scheduledDate = '';
       state.scheduledTime = '';
       state.selectedTaskIds = [];
@@ -224,6 +234,7 @@ export const {
   deselectAllActivitiesForHelpType,
   setSelectedTiming,
   setDescription,
+  setMultiDescription,
   setScheduledDate,
   setScheduledTime,
   toggleTaskSelection,

@@ -1,8 +1,7 @@
 /**
  * Login Screen
  *
- * Handles user login with email and password, validation, demo autofill,
- * unverified user redirection, and session persistence.
+ * Handles user login step 1: Requesting an OTP using email.
  */
 
 import React, { useState, useEffect } from 'react';
@@ -11,7 +10,6 @@ import {
   Text,
   TouchableOpacity,
   StyleSheet,
-  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -25,31 +23,17 @@ import {
 import { colors, spacing, typography, radius } from '@/theme';
 import { useFormField } from '@/hooks';
 import { isValidEmail } from '@/utils/validation';
-import {
-  useAppDispatch,
-  useAppSelector,
-  loginSuccess,
-  setAuthLoading,
-  setAuthError,
-  setProfile,
-  setSelectedTaskIds,
-} from '@/store';
-import { login as mockLogin } from '@/services/mockAuthService';
-import {
-  saveSession,
-  getProfileData,
-  getSelectedTaskIds,
-} from '@/utils/storage';
-import { MOCK_USER_CREDENTIALS } from '@/constants';
+import { extractErrorMessage } from '@/utils';
+import { useRequestLoginOtpMutation } from '@/services/authApi';
 
 export default function LoginScreen() {
   const router = useRouter();
-  const dispatch = useAppDispatch();
-  const { isLoading } = useAppSelector((state) => state.auth);
   const params = useLocalSearchParams<{ verifiedEmail?: string; registeredEmail?: string }>();
 
   const [formError, setFormError] = useState<string | null>(null);
   const [successNotice, setSuccessNotice] = useState<string | null>(null);
+
+  const [requestOtp, { isLoading }] = useRequestLoginOtpMutation();
 
   const emailField = useFormField({
     initialValue: params.verifiedEmail || params.registeredEmail || '',
@@ -60,99 +44,39 @@ export default function LoginScreen() {
     },
   });
 
-  const passwordField = useFormField({
-    initialValue: '',
-    validate: (val) => {
-      if (!val) return 'Password is required';
-      return null;
-    },
-  });
-
   useEffect(() => {
     if (params.verifiedEmail) {
       setSuccessNotice('Email verified successfully! You can now sign in.');
     }
   }, [params.verifiedEmail]);
 
-  const handleAutofillDemo = () => {
-    emailField.setValue(MOCK_USER_CREDENTIALS.email);
-    passwordField.setValue(MOCK_USER_CREDENTIALS.password);
-    setFormError(null);
-  };
-
-  const handleForgotPassword = () => {
-    Alert.alert(
-      'Demo Mode',
-      `Use the demo account to sign in:\n\nEmail: ${MOCK_USER_CREDENTIALS.email}\nPassword: ${MOCK_USER_CREDENTIALS.password}`,
-      [
-        { text: 'Autofill Credentials', onPress: handleAutofillDemo },
-        { text: 'OK', style: 'cancel' },
-      ],
-    );
-  };
-
-  const handleLogin = async () => {
+  const handleRequestOtp = async () => {
     setFormError(null);
     setSuccessNotice(null);
 
-    const isEmailValid = emailField.runValidation();
-    const isPasswordValid = passwordField.runValidation();
-
-    if (!isEmailValid || !isPasswordValid) {
+    if (!emailField.runValidation()) {
       return;
     }
 
-    dispatch(setAuthLoading(true));
-
     try {
-      const response = await mockLogin({
-        email: emailField.value.trim(),
-        password: passwordField.value,
+      await requestOtp({ email: emailField.value.trim() }).unwrap();
+
+      router.push({
+        pathname: '/(auth)/login-verify-otp',
+        params: { email: emailField.value.trim() },
       });
-
-      // Persist session
-      await saveSession(response.token, response.user);
-      dispatch(loginSuccess(response));
-
-      // Hydrate stored profile and tasks if available
-      const storedProfile = await getProfileData();
-      if (storedProfile) {
-        dispatch(setProfile(storedProfile));
-      }
-
-      const storedTasks = await getSelectedTaskIds();
-      if (storedTasks.length > 0) {
-        dispatch(setSelectedTaskIds(storedTasks));
-      }
-
-      // Route transition based on user state
-      if (!response.user.isProfileComplete && !storedProfile) {
-        router.replace('/(onboarding)/profile');
-      } else if (storedTasks.length > 0) {
-        router.replace('/(main)/home');
+    } catch (err: any) {
+      console.error('[Request Login OTP Error]:', err);
+      if (err?.status === 403) {
+        router.push({
+          pathname: '/(auth)/verify-email',
+          params: { email: emailField.value.trim() },
+        });
       } else {
-        router.replace('/(main)/tasks');
-      }
-    } catch (err: unknown) {
-      const errMessage = err instanceof Error ? err.message : 'Login failed';
-
-      if (errMessage === 'UNVERIFIED') {
-        dispatch(setAuthError(null));
-        setFormError('UNVERIFIED');
-      } else {
-        dispatch(setAuthError(errMessage));
+        const errMessage = extractErrorMessage(err, 'Could not send login code');
         setFormError(errMessage);
       }
-    } finally {
-      dispatch(setAuthLoading(false));
     }
-  };
-
-  const handleRedirectToVerification = () => {
-    router.push({
-      pathname: '/(auth)/verify-email',
-      params: { email: emailField.value.trim() },
-    });
   };
 
   return (
@@ -166,7 +90,7 @@ export default function LoginScreen() {
           <Text style={styles.brandName}>Livora</Text>
           <Text style={styles.heading}>Welcome back</Text>
           <Text style={styles.subheading}>
-            Sign in to manage your household and lifestyle services.
+            Sign in securely with an email verification code. No password required.
           </Text>
         </View>
 
@@ -179,26 +103,7 @@ export default function LoginScreen() {
         )}
 
         {/* Error Banners */}
-        {formError === 'UNVERIFIED' ? (
-          <View style={styles.unverifiedBanner}>
-            <View style={styles.unverifiedContent}>
-              <Feather name="alert-triangle" size={18} color={colors.accent} />
-              <View style={styles.unverifiedTextContainer}>
-                <Text style={styles.unverifiedTitle}>Email Not Verified</Text>
-                <Text style={styles.unverifiedMessage}>
-                  Please verify your email address to continue to your account.
-                </Text>
-              </View>
-            </View>
-            <Button
-              label="Verify Email Now"
-              size="sm"
-              variant="outline"
-              onPress={handleRedirectToVerification}
-              style={styles.verifyCtaButton}
-            />
-          </View>
-        ) : formError ? (
+        {formError ? (
           <View style={styles.errorBanner}>
             <Feather name="alert-circle" size={18} color={colors.error} />
             <Text style={styles.errorBannerText}>{formError}</Text>
@@ -218,61 +123,19 @@ export default function LoginScreen() {
             keyboardType="email-address"
             autoCapitalize="none"
             autoCorrect={false}
-            returnKeyType="next"
-          />
-
-          <Input
-            label="Password"
-            placeholder="Enter your password"
-            value={passwordField.value}
-            onChangeText={passwordField.setValue}
-            onBlur={passwordField.onBlur}
-            error={passwordField.error}
-            leftIcon="lock"
-            secureTextEntry
             returnKeyType="done"
-            onSubmitEditing={handleLogin}
+            onSubmitEditing={handleRequestOtp}
           />
-
-          <View style={styles.forgotRow}>
-            <TouchableOpacity
-              onPress={handleForgotPassword}
-              accessibilityRole="button"
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-            >
-              <Text style={styles.forgotText}>Forgot password?</Text>
-            </TouchableOpacity>
-          </View>
 
           <Button
-            label="Sign In"
-            onPress={handleLogin}
+            label="Send Login Code"
+            onPress={handleRequestOtp}
             loading={isLoading}
             fullWidth
             size="lg"
             style={styles.submitButton}
           />
         </View>
-
-        {/* Demo Quickfill Card */}
-        <TouchableOpacity
-          style={styles.demoCard}
-          onPress={handleAutofillDemo}
-          activeOpacity={0.8}
-          accessibilityRole="button"
-          accessibilityLabel="Autofill demo account credentials"
-        >
-          <View style={styles.demoBadge}>
-            <Feather name="zap" size={14} color={colors.primary} />
-          </View>
-          <View style={styles.demoTextContainer}>
-            <Text style={styles.demoTitle}>Quick Demo Sign-In</Text>
-            <Text style={styles.demoSubtitle}>
-              Tap to autofill: {MOCK_USER_CREDENTIALS.email}
-            </Text>
-          </View>
-          <Feather name="arrow-right" size={16} color={colors.primary} />
-        </TouchableOpacity>
 
         {/* Register Footer Link */}
         <View style={styles.footerContainer}>
@@ -358,79 +221,11 @@ const styles = StyleSheet.create({
     color: colors.error,
     flex: 1,
   },
-  unverifiedBanner: {
-    backgroundColor: colors.accentLight,
-    borderWidth: 1,
-    borderColor: colors.accent,
-    borderRadius: radius.md,
-    padding: spacing.md,
-    marginBottom: spacing.lg,
-  },
-  unverifiedContent: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: spacing.sm,
-  },
-  unverifiedTextContainer: {
-    flex: 1,
-  },
-  unverifiedTitle: {
-    ...typography.label,
-    color: colors.textPrimary,
-  },
-  unverifiedMessage: {
-    ...typography.caption,
-    color: colors.textSecondary,
-    marginTop: 2,
-  },
-  verifyCtaButton: {
-    marginTop: spacing.sm,
-    borderColor: colors.accent,
-  },
   formContainer: {
     marginBottom: spacing.xl,
   },
-  forgotRow: {
-    alignItems: 'flex-end',
-    marginBottom: spacing.xl,
-    marginTop: -spacing.sm,
-  },
-  forgotText: {
-    ...typography.captionMedium,
-    color: colors.primary,
-  },
   submitButton: {
     marginTop: spacing.xs,
-  },
-  demoCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.highlightMint,
-    borderWidth: 1,
-    borderColor: colors.primaryLight,
-    borderRadius: radius.md,
-    padding: spacing.md,
-    marginBottom: spacing.xxl,
-    gap: spacing.sm,
-  },
-  demoBadge: {
-    width: 28,
-    height: 28,
-    borderRadius: radius.sm,
-    backgroundColor: colors.white,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  demoTextContainer: {
-    flex: 1,
-  },
-  demoTitle: {
-    ...typography.captionMedium,
-    color: colors.primary,
-  },
-  demoSubtitle: {
-    ...typography.caption,
-    color: colors.textSecondary,
   },
   footerContainer: {
     flexDirection: 'row',

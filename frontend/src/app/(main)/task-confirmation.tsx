@@ -10,7 +10,7 @@
  * - Celebratory completion state upon submission
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -19,12 +19,15 @@ import {
   TextInput,
   StyleSheet,
   Platform,
+  BackHandler,
 } from 'react-native';
+
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 
 import { colors, spacing, radius, shadows } from '@/theme';
+import type { ServiceRequest } from '@/types';
 import {
   useAppDispatch,
   useAppSelector,
@@ -34,10 +37,13 @@ import {
   resetRequest,
 } from '@/store';
 import { saveSelectedTaskIds } from '@/utils/storage';
+import { useCreateRequestMutation } from '@/services/requestsApi';
+
 
 export default function TaskConfirmationScreen() {
   const router = useRouter();
   const dispatch = useAppDispatch();
+  const [createRequest] = useCreateRequestMutation();
 
   const {
     categories,
@@ -61,7 +67,29 @@ export default function TaskConfirmationScreen() {
   const [localTime, setLocalTime] = useState(reduxTime || '14:30');
   const [isSubmitted, setIsSubmitted] = useState(false);
 
+  const handleBack = useCallback(() => {
+    router.replace('/(main)/task-timing');
+  }, [router]);
+
+  useEffect(() => {
+    const onBackPress = () => {
+      if (!isSubmitted) {
+        handleBack();
+        return true;
+      }
+      return false;
+    };
+
+    const subscription = BackHandler.addEventListener(
+      'hardwareBackPress',
+      onBackPress
+    );
+
+    return () => subscription.remove();
+  }, [handleBack, isSubmitted]);
+
   const isScheduled = selectedTiming === 'scheduled';
+
 
   // Gather selected activity names for preview tags
   const selectedActivityNames: string[] = [];
@@ -107,6 +135,26 @@ export default function TaskConfirmationScreen() {
     // Persist to storage
     await saveSelectedTaskIds(selectedActivityIds);
 
+    // Save formal Service Request
+    // Save formal Service Request via API
+    try {
+      const activitiesList = selectedActivityNames.length > 0
+        ? selectedActivityNames
+        : [activeCategory?.name || 'Complete Assistance'];
+
+      await createRequest({
+        categoryName: activeCategory?.name || 'Concierge Service',
+        categoryIcon: (activeCategory?.icon as string) || 'check-circle',
+        activities: activitiesList,
+        timing: selectedTiming,
+        scheduledDate: isScheduled ? localDate : undefined,
+        scheduledTime: isScheduled ? localTime : undefined,
+        notes: localDesc.trim() || undefined,
+      }).unwrap();
+    } catch (e) {
+      console.warn('Failed to save service request to API:', e);
+    }
+
     // Show celebratory completion screen
     setIsSubmitted(true);
   };
@@ -116,6 +164,11 @@ export default function TaskConfirmationScreen() {
     router.replace('/(main)/home');
   };
 
+  const handleFinishToRequests = () => {
+    dispatch(resetRequest());
+    router.replace('/(main)/requests');
+  };
+
   // Completion Screen
   if (isSubmitted) {
     return (
@@ -123,7 +176,7 @@ export default function TaskConfirmationScreen() {
         <View style={styles.successContainer}>
           <View style={styles.successIconOuter}>
             <View style={styles.successIconInner}>
-              <Feather name="check" size={40} color="#FFFFFF" />
+              <Feather name="check" size={40} color={colors.white} />
             </View>
           </View>
 
@@ -152,7 +205,7 @@ export default function TaskConfirmationScreen() {
             </View>
 
             {localDesc.trim().length > 0 && (
-              <View style={[styles.recapRow, { borderTopWidth: 1, borderTopColor: '#F3F4F6', paddingTop: 10 }]}>
+              <View style={[styles.recapRow, { borderTopWidth: 1, borderTopColor: colors.surfaceElevated, paddingTop: 10 }]}>
                 <Text style={styles.recapLabel}>Notes</Text>
                 <Text style={styles.recapValue} numberOfLines={2}>
                   {localDesc}
@@ -161,17 +214,29 @@ export default function TaskConfirmationScreen() {
             )}
           </View>
 
-          <TouchableOpacity
-            style={styles.doneButton}
-            activeOpacity={0.85}
-            onPress={handleFinishToHome}
-          >
-            <Text style={styles.doneButtonText}>Done</Text>
-          </TouchableOpacity>
+          <View style={styles.successActionButtons}>
+            <TouchableOpacity
+              style={styles.doneButton}
+              activeOpacity={0.85}
+              onPress={handleFinishToRequests}
+            >
+              <Feather name="clipboard" size={18} color={colors.white} style={{ marginRight: 8 }} />
+              <Text style={styles.doneButtonText}>View in Requests</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.homeSecondaryButton}
+              activeOpacity={0.8}
+              onPress={handleFinishToHome}
+            >
+              <Text style={styles.homeSecondaryButtonText}>Back to Home</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </SafeAreaView>
     );
   }
+
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
@@ -185,7 +250,7 @@ export default function TaskConfirmationScreen() {
           <View style={styles.topNavRow}>
             <TouchableOpacity
               style={styles.backButton}
-              onPress={() => router.back()}
+              onPress={handleBack}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
               accessibilityRole="button"
               accessibilityLabel="Go back"
@@ -193,6 +258,7 @@ export default function TaskConfirmationScreen() {
               <Feather name="chevron-left" size={20} color={colors.primary} />
               <Text style={styles.backButtonText}>Back</Text>
             </TouchableOpacity>
+
           </View>
 
           {/* Category Badge */}
@@ -313,7 +379,7 @@ export default function TaskConfirmationScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#FAF9F7',
+    backgroundColor: colors.background,
   },
   container: {
     flex: 1,
@@ -372,9 +438,9 @@ const styles = StyleSheet.create({
   selectionChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: colors.border,
     borderRadius: radius.pill,
     paddingHorizontal: 12,
     paddingVertical: 6,
@@ -383,25 +449,25 @@ const styles = StyleSheet.create({
   selectionChipText: {
     fontSize: 13,
     fontWeight: '500',
-    color: '#1A1D2B',
+    color: colors.textPrimary,
   },
   heading: {
     fontSize: 26,
     fontWeight: '700',
-    color: '#1A1D2B',
+    color: colors.textPrimary,
     letterSpacing: -0.5,
     marginBottom: 8,
   },
   subtitle: {
     fontSize: 15,
-    color: '#6B7280',
+    color: colors.textSecondary,
     lineHeight: 22,
     marginBottom: 20,
   },
   textAreaContainer: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: colors.border,
     borderRadius: 16,
     padding: 16,
     minHeight: 140,
@@ -410,7 +476,7 @@ const styles = StyleSheet.create({
   },
   textAreaInput: {
     fontSize: 16,
-    color: '#1A1D2B',
+    color: colors.textPrimary,
     lineHeight: 24,
     flex: 1,
   },
@@ -424,14 +490,14 @@ const styles = StyleSheet.create({
   inputLabel: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#1A1D2B',
+    color: colors.textPrimary,
   },
   inputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: colors.border,
     borderRadius: 12,
     paddingHorizontal: 14,
     height: 50,
@@ -442,19 +508,19 @@ const styles = StyleSheet.create({
   textInput: {
     flex: 1,
     fontSize: 15,
-    color: '#1A1D2B',
+    color: colors.textPrimary,
   },
   stickyBottomBar: {
     position: 'absolute',
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: '#FAF9F7',
+    backgroundColor: colors.background,
     paddingHorizontal: 20,
     paddingTop: 12,
     paddingBottom: Platform.OS === 'ios' ? 24 : 16,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(229, 231, 235, 0.6)',
+    borderTopColor: colors.border,
   },
   submitButton: {
     backgroundColor: colors.primary,
@@ -465,7 +531,7 @@ const styles = StyleSheet.create({
     ...shadows.sm,
   },
   submitButtonText: {
-    color: '#FFFFFF',
+    color: colors.textOnPrimary,
     fontSize: 16,
     fontWeight: '700',
   },
@@ -497,14 +563,14 @@ const styles = StyleSheet.create({
   successTitle: {
     fontSize: 28,
     fontWeight: '700',
-    color: '#1A1D2B',
+    color: colors.textPrimary,
     letterSpacing: -0.5,
     marginBottom: 12,
     textAlign: 'center',
   },
   successSubtitle: {
     fontSize: 15,
-    color: '#6B7280',
+    color: colors.textSecondary,
     lineHeight: 23,
     textAlign: 'center',
     marginBottom: 28,
@@ -512,13 +578,13 @@ const styles = StyleSheet.create({
   },
   boldText: {
     fontWeight: '700',
-    color: '#1A1D2B',
+    color: colors.textPrimary,
   },
   recapCard: {
     width: '100%',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: colors.border,
     borderRadius: 16,
     padding: 18,
     gap: 10,
@@ -532,27 +598,48 @@ const styles = StyleSheet.create({
   },
   recapLabel: {
     fontSize: 14,
-    color: '#6B7280',
+    color: colors.textSecondary,
   },
   recapValue: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#1A1D2B',
+    color: colors.textPrimary,
     maxWidth: '70%',
     textAlign: 'right',
+  },
+  successActionButtons: {
+    width: '100%',
+    gap: 12,
   },
   doneButton: {
     width: '100%',
     backgroundColor: colors.primary,
     borderRadius: 12,
     height: 52,
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     ...shadows.sm,
   },
   doneButtonText: {
-    color: '#FFFFFF',
+    color: colors.textOnPrimary,
     fontSize: 16,
     fontWeight: '700',
   },
+  homeSecondaryButton: {
+    width: '100%',
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 12,
+    height: 50,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  homeSecondaryButtonText: {
+    color: colors.textPrimary,
+    fontSize: 15,
+    fontWeight: '600',
+  },
 });
+

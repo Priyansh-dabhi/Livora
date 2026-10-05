@@ -19,18 +19,6 @@ const authSlice = createSlice({
   name: 'auth',
   initialState,
   reducers: {
-    setLoading(state, action: PayloadAction<boolean>) {
-      state.isLoading = action.payload;
-      if (action.payload) {
-        state.error = null;
-      }
-    },
-
-    setError(state, action: PayloadAction<string | null>) {
-      state.error = action.payload;
-      state.isLoading = false;
-    },
-
     loginSuccess(state, action: PayloadAction<{ user: User; token: string }>) {
       state.user = action.payload.user;
       state.token = action.payload.token;
@@ -82,8 +70,6 @@ const authSlice = createSlice({
 });
 
 export const {
-  setLoading,
-  setError,
   loginSuccess,
   registerSuccess,
   verifyEmailSuccess,

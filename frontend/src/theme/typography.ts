@@ -1,16 +1,11 @@
 /**
  * Livora Design System — Typography
  *
- * System font stack. Large readable text with strong hierarchy.
+ * Theme: Alexandria
+ * Noto Serif for headlines, Inter for body, Public Sans for labels.
  */
 
 import { TextStyle, Platform } from 'react-native';
-
-const fontFamily = Platform.select({
-  ios: 'System',
-  android: 'Roboto',
-  default: 'System',
-});
 
 /** Font weight constants */
 export const fontWeights = {
@@ -20,140 +15,164 @@ export const fontWeights = {
   bold: '700' as TextStyle['fontWeight'],
 };
 
+/** 
+ * Font families mapped to the exact string names expected by expo-font.
+ * NotoSerif, Inter, PublicSans
+ */
+export const fontFamilies = {
+  headline: 'NotoSerif_400Regular',
+  headlineMedium: 'NotoSerif_500Medium',
+  headlineSemiBold: 'NotoSerif_600SemiBold',
+  body: 'Inter_400Regular',
+  bodyMedium: 'Inter_500Medium',
+  bodySemiBold: 'Inter_600SemiBold',
+  label: 'PublicSans_500Medium',
+  labelSemiBold: 'PublicSans_600SemiBold',
+  // Fallback
+  system: Platform.select({ ios: 'System', android: 'Roboto', default: 'System' }),
+};
+
 /** Font size scale */
 export const fontSizes = {
-  /** 11px — micro labels */
+  /** 11px — micro labels (label-sm) */
   xs: 11,
-  /** 12px — captions, badges */
+  /** 12px — captions, badges (label-md) */
   sm: 12,
-  /** 14px — body small, secondary text */
+  /** 14px — body small, secondary text (body-md, label-lg) */
   md: 14,
-  /** 16px — body default */
+  /** 16px — body default (body-lg) */
   base: 16,
-  /** 18px — large body, sub-headings */
-  lg: 18,
-  /** 20px — section headers */
+  /** 17px — sub-headings (title-md) */
+  lg: 17,
+  /** 20px — section headers (headline-sm) */
   xl: 20,
-  /** 24px — screen titles */
-  xxl: 24,
-  /** 28px — hero headings */
-  xxxl: 28,
-  /** 32px — display text */
-  display: 32,
+  /** 26px — screen titles (headline-md) */
+  xxl: 26,
+  /** 32px — hero headings (headline-lg) */
+  xxxl: 32,
+  /** 36px/48px — display text (display-lg-mobile/display-lg) */
+  display: 36,
 } as const;
 
 /** Line height scale */
 export const lineHeights = {
   tight: 1.2,
   normal: 1.4,
-  relaxed: 1.6,
+  relaxed: 1.5,
 } as const;
 
 /** Pre-composed text styles */
 export const typography = {
   display: {
-    fontFamily,
+    fontFamily: fontFamilies.headline,
     fontSize: fontSizes.display,
-    fontWeight: fontWeights.bold,
-    lineHeight: fontSizes.display * lineHeights.tight,
+    fontWeight: fontWeights.regular,
+    lineHeight: 42,
+    letterSpacing: fontSizes.display * -0.015,
   } satisfies TextStyle,
 
   h1: {
-    fontFamily,
+    fontFamily: fontFamilies.headline,
     fontSize: fontSizes.xxxl,
-    fontWeight: fontWeights.bold,
-    lineHeight: fontSizes.xxxl * lineHeights.tight,
+    fontWeight: fontWeights.regular,
+    lineHeight: 38,
+    letterSpacing: fontSizes.xxxl * -0.01,
   } satisfies TextStyle,
 
   h2: {
-    fontFamily,
+    fontFamily: fontFamilies.headlineMedium,
     fontSize: fontSizes.xxl,
-    fontWeight: fontWeights.semiBold,
-    lineHeight: fontSizes.xxl * lineHeights.tight,
+    fontWeight: fontWeights.medium,
+    lineHeight: 32,
   } satisfies TextStyle,
 
   h3: {
-    fontFamily,
+    fontFamily: fontFamilies.bodySemiBold, // Using Public Sans/Inter for h3/headline-sm? The plan says headline-sm is Public Sans.
     fontSize: fontSizes.xl,
     fontWeight: fontWeights.semiBold,
-    lineHeight: fontSizes.xl * lineHeights.normal,
+    lineHeight: 26,
+    letterSpacing: fontSizes.xl * -0.01,
   } satisfies TextStyle,
 
   h4: {
-    fontFamily,
+    fontFamily: fontFamilies.bodySemiBold, // title-md uses Public Sans
     fontSize: fontSizes.lg,
     fontWeight: fontWeights.semiBold,
-    lineHeight: fontSizes.lg * lineHeights.normal,
+    lineHeight: 24,
   } satisfies TextStyle,
 
   bodyLarge: {
-    fontFamily,
+    fontFamily: fontFamilies.body,
     fontSize: fontSizes.base,
     fontWeight: fontWeights.regular,
-    lineHeight: fontSizes.base * lineHeights.relaxed,
+    lineHeight: 24,
   } satisfies TextStyle,
 
   body: {
-    fontFamily,
+    fontFamily: fontFamilies.body,
     fontSize: fontSizes.md,
     fontWeight: fontWeights.regular,
-    lineHeight: fontSizes.md * lineHeights.relaxed,
+    lineHeight: 20,
   } satisfies TextStyle,
 
   bodyMedium: {
-    fontFamily,
+    fontFamily: fontFamilies.bodyMedium,
     fontSize: fontSizes.md,
     fontWeight: fontWeights.medium,
-    lineHeight: fontSizes.md * lineHeights.relaxed,
+    lineHeight: 20,
   } satisfies TextStyle,
 
   caption: {
-    fontFamily,
+    fontFamily: fontFamilies.label,
     fontSize: fontSizes.sm,
-    fontWeight: fontWeights.regular,
-    lineHeight: fontSizes.sm * lineHeights.normal,
+    fontWeight: fontWeights.medium,
+    lineHeight: 16,
+    letterSpacing: fontSizes.sm * 0.02,
   } satisfies TextStyle,
 
   captionMedium: {
-    fontFamily,
+    fontFamily: fontFamilies.label,
     fontSize: fontSizes.sm,
     fontWeight: fontWeights.medium,
-    lineHeight: fontSizes.sm * lineHeights.normal,
+    lineHeight: 16,
+    letterSpacing: fontSizes.sm * 0.02,
   } satisfies TextStyle,
 
   micro: {
-    fontFamily,
+    fontFamily: fontFamilies.labelSemiBold,
     fontSize: fontSizes.xs,
-    fontWeight: fontWeights.medium,
-    lineHeight: fontSizes.xs * lineHeights.normal,
+    fontWeight: fontWeights.semiBold,
+    lineHeight: 14,
+    letterSpacing: fontSizes.xs * 0.04,
   } satisfies TextStyle,
 
   button: {
-    fontFamily,
+    fontFamily: fontFamilies.bodyMedium,
     fontSize: fontSizes.base,
-    fontWeight: fontWeights.semiBold,
-    lineHeight: fontSizes.base * lineHeights.normal,
+    fontWeight: fontWeights.medium,
+    lineHeight: 24,
   } satisfies TextStyle,
 
   buttonSmall: {
-    fontFamily,
+    fontFamily: fontFamilies.bodyMedium,
     fontSize: fontSizes.md,
-    fontWeight: fontWeights.semiBold,
-    lineHeight: fontSizes.md * lineHeights.normal,
+    fontWeight: fontWeights.medium,
+    lineHeight: 20,
   } satisfies TextStyle,
 
   input: {
-    fontFamily,
+    fontFamily: fontFamilies.body,
     fontSize: fontSizes.base,
     fontWeight: fontWeights.regular,
-    lineHeight: fontSizes.base * lineHeights.normal,
+    lineHeight: 24,
   } satisfies TextStyle,
 
   label: {
-    fontFamily,
+    fontFamily: fontFamilies.labelSemiBold,
     fontSize: fontSizes.md,
-    fontWeight: fontWeights.medium,
-    lineHeight: fontSizes.md * lineHeights.normal,
+    fontWeight: fontWeights.semiBold,
+    lineHeight: 18,
+    letterSpacing: fontSizes.md * 0.01,
   } satisfies TextStyle,
 } as const;
 

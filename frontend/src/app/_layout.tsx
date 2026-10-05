@@ -11,6 +11,24 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { Stack } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
+import { useFonts } from 'expo-font';
+import * as SplashScreen from 'expo-splash-screen';
+import {
+  NotoSerif_400Regular,
+  NotoSerif_500Medium,
+  NotoSerif_600SemiBold,
+} from '@expo-google-fonts/noto-serif';
+import {
+  Inter_400Regular,
+  Inter_500Medium,
+  Inter_600SemiBold,
+} from '@expo-google-fonts/inter';
+import {
+  PublicSans_500Medium,
+  PublicSans_600SemiBold,
+} from '@expo-google-fonts/public-sans';
+
+SplashScreen.preventAutoHideAsync();
 
 import {
   store,
@@ -23,6 +41,7 @@ import {
 } from '@/store';
 import {
   getSession,
+  saveSession,
   getProfileData,
   getOnboardingComplete,
   getSelectedTaskIds,
@@ -49,6 +68,11 @@ function AppContent() {
         dispatch(hydrateWelcome(welcomeSeen));
 
         if (session) {
+          // Auto-heal session if isVerified was missing or undefined
+          if (session.user && session.token && !session.user.isVerified) {
+            session.user.isVerified = true;
+            await saveSession(session.token, session.user);
+          }
           dispatch(hydrateAuth(session));
         }
         if (profile) {
@@ -107,6 +131,27 @@ function AppContent() {
 }
 
 export default function RootLayout() {
+  const [fontsLoaded] = useFonts({
+    NotoSerif_400Regular,
+    NotoSerif_500Medium,
+    NotoSerif_600SemiBold,
+    Inter_400Regular,
+    Inter_500Medium,
+    Inter_600SemiBold,
+    PublicSans_500Medium,
+    PublicSans_600SemiBold,
+  });
+
+  useEffect(() => {
+    if (fontsLoaded) {
+      SplashScreen.hideAsync();
+    }
+  }, [fontsLoaded]);
+
+  if (!fontsLoaded) {
+    return null;
+  }
+
   return (
     <Provider store={store}>
       <SafeAreaProvider>

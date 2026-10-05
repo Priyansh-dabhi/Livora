@@ -6,7 +6,8 @@ export type {
   User,
   AuthState,
   RegisterPayload,
-  LoginPayload,
+  LoginRequestPayload,
+  LoginVerifyPayload,
   OtpPayload,
   ResendOtpPayload,
   AuthResponse,
@@ -26,5 +27,8 @@ export type {
   Category,
   Task,
   TimingOptionId,
+  RequestStatus,
+  ServiceRequest,
   TasksState,
 } from './task';
+

@@ -44,6 +44,22 @@ export interface Task {
 
 export type TimingOptionId = 'standard' | 'same_day' | 'express' | 'scheduled';
 
+export type RequestStatus = 'pending' | 'in_progress' | 'completed' | 'cancelled';
+
+export interface ServiceRequest {
+  id: string;
+  categoryName: string;
+  categoryIcon: string;
+  activities: string[];
+  timing: TimingOptionId;
+  scheduledDate?: string;
+  scheduledTime?: string;
+  notes?: string;
+  status: RequestStatus;
+  createdAt: string;
+  lifestyleManagerName: string;
+}
+
 export interface TasksState {
   categories: Category[];
   tasks: Task[];
@@ -53,6 +69,7 @@ export interface TasksState {
   selectedActivityIds: string[];
   selectedTiming: TimingOptionId;
   description: string;
+  multiDescriptions: Record<string, string>;
   scheduledDate: string;
   scheduledTime: string;
   selectedTaskIds: string[];
@@ -60,3 +77,4 @@ export interface TasksState {
   isLoading: boolean;
   error: string | null;
 }
+

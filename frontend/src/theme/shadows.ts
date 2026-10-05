@@ -11,39 +11,39 @@ export const shadows = {
 
   sm: Platform.select<ViewStyle>({
     ios: {
-      shadowColor: '#000',
+      shadowColor: '#1B1C1D', // neutral cool (rgba 27,28,29)
       shadowOffset: { width: 0, height: 1 },
-      shadowOpacity: 0.05,
-      shadowRadius: 2,
+      shadowOpacity: 0.06,
+      shadowRadius: 3,
     },
     android: {
-      elevation: 1,
+      elevation: 2,
     },
     default: {},
   }) ?? {},
 
   md: Platform.select<ViewStyle>({
     ios: {
-      shadowColor: '#000',
+      shadowColor: '#1B1C1D',
       shadowOffset: { width: 0, height: 2 },
       shadowOpacity: 0.08,
-      shadowRadius: 4,
+      shadowRadius: 8,
     },
     android: {
-      elevation: 3,
+      elevation: 4,
     },
     default: {},
   }) ?? {},
 
   lg: Platform.select<ViewStyle>({
     ios: {
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.1,
-      shadowRadius: 8,
+      shadowColor: '#1B1C1D',
+      shadowOffset: { width: 0, height: 8 },
+      shadowOpacity: 0.12,
+      shadowRadius: 24,
     },
     android: {
-      elevation: 6,
+      elevation: 8,
     },
     default: {},
   }) ?? {},

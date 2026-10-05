@@ -8,8 +8,6 @@ export { useAppDispatch, useAppSelector } from './hooks';
 
 // Auth slice
 export {
-  setLoading as setAuthLoading,
-  setError as setAuthError,
   loginSuccess,
   registerSuccess,
   verifyEmailSuccess,
@@ -42,6 +40,7 @@ export {
   deselectAllActivitiesForHelpType,
   setSelectedTiming,
   setDescription,
+  setMultiDescription,
   setScheduledDate,
   setScheduledTime,
   toggleTaskSelection,

@@ -20,7 +20,8 @@ model User {
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 
-  otpChallenges   OtpChallenge[]
+  otpChallenges    OtpChallenge[]
+  serviceRequests  ServiceRequest[]
 
   @@index([email])
   @@map("users")
@@ -52,4 +53,25 @@ model OtpChallenge {
 
   @@index([userId, purpose])
   @@map("otp_challenges")
+}
+
+model ServiceRequest {
+  id                   String   @id @default(uuid())
+  userId               String
+  categoryName         String
+  categoryIcon         String
+  activities           String[]
+  timing               String
+  scheduledDate        String?
+  scheduledTime        String?
+  notes                String?
+  status               String   @default("pending")
+  lifestyleManagerName String?  
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("service_requests")
 }

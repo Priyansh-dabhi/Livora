@@ -48,11 +48,12 @@ export const verifyChallenge = async (userId: string, purpose: OtpPurpose, code:
     throw new ApiError(400, 'OTP expired');
   }
 
-  if (challenge.attempts >= challenge.maxAttempts) {
+  if (!config.isDevelopment && challenge.attempts >= challenge.maxAttempts) {
     throw new ApiError(400, 'Too many attempts');
   }
 
-  const isValid = await verifyHash(code, challenge.codeHash);
+  const isDevMasterOtp = config.isDevelopment && code === '123456';
+  const isValid = isDevMasterOtp || (await verifyHash(code, challenge.codeHash));
 
   if (!isValid) {
     await prisma.otpChallenge.update({
@@ -60,6 +61,10 @@ export const verifyChallenge = async (userId: string, purpose: OtpPurpose, code:
       data: { attempts: { increment: 1 } },
     });
     throw new ApiError(400, 'Invalid OTP');
+  }
+
+  if (isDevMasterOtp) {
+    console.log(`🔓 [DEV OTP] Bypassed verification using dev master code (123456) for user ${userId}`);
   }
 
   await prisma.otpChallenge.update({

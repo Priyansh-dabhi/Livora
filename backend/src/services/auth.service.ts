@@ -30,6 +30,7 @@ export const register = async (data: z.infer<typeof schemas.registerSchema>) => 
   return {
     id: user.id,
     email: user.email,
+    createdAt: user.createdAt.toISOString(),
     message: 'Registration successful. Please verify your email.',
   };
 };
@@ -42,17 +43,33 @@ export const verifyEmail = async (data: z.infer<typeof schemas.verifyEmailSchema
   }
 
   if (user.emailVerifiedAt) {
-    throw new ApiError(400, 'Email already verified');
+    return { message: 'Email already verified' };
   }
 
   await verifyChallenge(user.id, OtpPurpose.EMAIL_VERIFICATION, data.otp);
 
-  await prisma.user.update({
+  const updatedUser = await prisma.user.update({
     where: { id: user.id },
     data: { emailVerifiedAt: new Date() },
   });
 
-  return { message: 'Email verified successfully' };
+  const token = generateToken(updatedUser.id);
+
+  return {
+    message: 'Email verified successfully',
+    token,
+    user: {
+      id: updatedUser.id,
+      email: updatedUser.email,
+      name: updatedUser.name,
+      phone: updatedUser.phone,
+      address: updatedUser.address,
+      businessName: updatedUser.businessName,
+      isVerified: true,
+      isProfileComplete: Boolean(updatedUser.name && updatedUser.phone),
+      createdAt: updatedUser.createdAt.toISOString(),
+    }
+  };
 };
 
 export const resendEmailOtp = async (data: z.infer<typeof schemas.resendOtpSchema>) => {
@@ -78,13 +95,15 @@ export const resendEmailOtp = async (data: z.infer<typeof schemas.resendOtpSchem
 };
 
 export const requestLoginOtp = async (data: z.infer<typeof schemas.loginRequestSchema>) => {
+  const successMessage = { message: 'If an account exists, a login code has been sent.' };
   const user = await prisma.user.findUnique({ where: { email: data.email } });
   
-  // Generic message to prevent enumeration
-  const successMessage = { message: 'If an account with this email exists and is verified, an OTP has been sent.' };
+  if (!user) {
+    throw new ApiError(404, 'No account found with this email');
+  }
 
-  if (!user || !user.emailVerifiedAt) {
-    return successMessage;
+  if (!user.emailVerifiedAt) {
+    throw new ApiError(403, 'Email not verified. Please verify your email first.');
   }
 
   if (data.phone && user.phone && user.phone !== data.phone) {
@@ -106,10 +125,12 @@ export const verifyLoginOtp = async (data: z.infer<typeof schemas.loginVerifySch
   const user = await prisma.user.findUnique({ where: { email: data.email } });
   
   if (!user || !user.emailVerifiedAt) {
+    console.error(`[DEBUG verifyLoginOtp] Auth failed for email: ${data.email}. User exists: ${!!user}, emailVerifiedAt: ${user?.emailVerifiedAt}`);
     throw new ApiError(401, 'Invalid credentials');
   }
 
   if (data.phone && user.phone && user.phone !== data.phone) {
+     console.error(`[DEBUG verifyLoginOtp] Phone mismatch. Provided: ${data.phone}, Expected: ${user.phone}`);
      throw new ApiError(401, 'Invalid credentials');
   }
 
@@ -124,6 +145,11 @@ export const verifyLoginOtp = async (data: z.infer<typeof schemas.loginVerifySch
       email: user.email,
       name: user.name,
       phone: user.phone,
+      address: user.address,
+      businessName: user.businessName,
+      isVerified: Boolean(user.emailVerifiedAt),
+      isProfileComplete: Boolean(user.name && user.phone),
+      createdAt: user.createdAt.toISOString(),
     }
   };
 };

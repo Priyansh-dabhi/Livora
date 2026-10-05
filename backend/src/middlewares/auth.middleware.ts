@@ -15,7 +15,7 @@ export const requireAuth = async (req: Request, res: Response, next: NextFunctio
     const { userId } = verifyToken(token);
     const user = await prisma.user.findUnique({
       where: { id: userId },
-      select: { id: true, email: true, name: true, phone: true }
+      select: { id: true, email: true, name: true, phone: true, address: true, businessName: true }
     });
 
     if (!user) {

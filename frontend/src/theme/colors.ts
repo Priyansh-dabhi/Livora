@@ -1,53 +1,56 @@
 /**
  * Livora Design System — Color Tokens
  *
- * Visual language: warm, premium, minimal.
- * Off-white backgrounds, deep green primary, dark navy text.
+ * Theme: Alexandria
+ * Visual language: archival intelligence, clean precision, scholarly authority.
+ * Cool neutral surfaces, indigo-cobalt primary, technical clarity.
+ *
+ * Extracted from Stitch Alexandria design system screens.
  */
 
 export const colors = {
   // ── Backgrounds ──────────────────────────────────────────
-  background: '#FAF9F7',        // warm off-white
-  surface: '#FFFFFF',           // cards / inputs
-  surfaceElevated: '#F5F4F2',   // slightly darker surface
-  highlightMint: '#E8F5EE',     // selected / highlighted elements
+  background: '#FAF9FA',        // cool near-white canvas
+  surface: '#FFFFFF',           // cards / inputs (pure white)
+  surfaceElevated: '#F5F3F4',   // elevated cards (surfaceContainerLow)
+  highlightMint: '#D9E2FF',     // selected / highlighted elements (primaryFixed)
 
   // ── Primary ──────────────────────────────────────────────
-  primary: '#1B6B4A',           // deep green — CTAs, links
-  primaryDark: '#145236',       // pressed state
-  primaryLight: '#D4EDDF',      // badges, light fills
+  primary: '#094CB2',           // indigo-cobalt — CTAs, links, active states
+  primaryDark: '#3366CC',       // primaryContainer — pressed / deep state
+  primaryLight: '#D9E2FF',      // primaryFixed — badges, light fills
 
   // ── Text ─────────────────────────────────────────────────
-  textPrimary: '#1A1D2B',       // dark navy / near-black
-  textSecondary: '#6B7280',     // muted blue-gray
-  textTertiary: '#9CA3AF',      // placeholder / hint
+  textPrimary: '#1B1C1D',       // neutral near-black (onSurface)
+  textSecondary: '#434653',     // cool slate (onSurfaceVariant)
+  textTertiary: '#737784',      // outline tone — placeholders / hints
   textOnPrimary: '#FFFFFF',     // text on primary-colored surfaces
-  textLink: '#1B6B4A',         // link color (matches primary)
+  textLink: '#094CB2',          // link color (matches primary)
 
   // ── Borders ──────────────────────────────────────────────
-  border: '#E5E7EB',            // light gray
-  borderFocused: '#1B6B4A',     // focused input
-  borderSelected: '#1B6B4A',    // selected card
+  border: '#C3C6D5',            // outlineVariant — subtle borders
+  borderFocused: '#094CB2',     // focused input (primary)
+  borderSelected: '#094CB2',    // selected card (primary)
 
   // ── Accent ───────────────────────────────────────────────
-  accent: '#F0AD4E',            // gold/yellow — "Soon" badges, highlights
-  accentLight: '#FFF8EC',       // light gold background
+  accent: '#BFAB49',            // gold — tertiaryContainer for badges, highlights
+  accentLight: '#F9E37A',       // tertiaryFixedDim — light gold background
 
   // ── Feedback ─────────────────────────────────────────────
-  error: '#DC3545',
-  errorLight: '#FDE8EA',
+  error: '#BA1A1A',
+  errorLight: '#FFDAD6',
   success: '#28A745',
   successLight: '#D4EDDA',
   warning: '#FFC107',
   warningLight: '#FFF3CD',
-  info: '#17A2B8',
-  infoLight: '#D1ECF1',
+  info: '#2259BF',              // surfaceTint blue (Alexandria)
+  infoLight: '#D9E2FF',         // primaryFixed
 
   // ── Misc ─────────────────────────────────────────────────
-  disabled: '#D1D5DB',
-  disabledText: '#9CA3AF',
-  overlay: 'rgba(0, 0, 0, 0.4)',
-  skeleton: '#E5E7EB',
+  disabled: '#C3C6D5',          // outlineVariant
+  disabledText: '#737784',      // outline
+  overlay: 'rgba(27, 28, 29, 0.4)', // neutral cool overlay
+  skeleton: '#E3E2E3',          // surfaceContainerHighest
   white: '#FFFFFF',
   black: '#000000',
   transparent: 'transparent',

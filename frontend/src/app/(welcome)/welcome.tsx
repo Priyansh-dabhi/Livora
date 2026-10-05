@@ -230,7 +230,7 @@ export default function WelcomeScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#FAF9F7',
+    backgroundColor: colors.background,
   },
   topBar: {
     flexDirection: 'row',
@@ -301,7 +301,7 @@ const styles = StyleSheet.create({
     width: 106,
     height: 106,
     borderRadius: 53,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.surface,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1.5,
@@ -327,14 +327,14 @@ const styles = StyleSheet.create({
   slideTitle: {
     fontSize: 26,
     fontWeight: '700',
-    color: '#1A1D2B',
+    color: colors.textPrimary,
     letterSpacing: -0.5,
     textAlign: 'center',
     marginBottom: 12,
   },
   slideSubtitle: {
     fontSize: 15,
-    color: '#6B7280',
+    color: colors.textSecondary,
     lineHeight: 23,
     textAlign: 'center',
     maxWidth: 320,
@@ -361,7 +361,7 @@ const styles = StyleSheet.create({
   },
   dotInactive: {
     width: 8,
-    backgroundColor: '#D1D5DB',
+    backgroundColor: colors.border,
   },
   actionButton: {
     flexDirection: 'row',
@@ -376,7 +376,7 @@ const styles = StyleSheet.create({
   actionButtonText: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: colors.textOnPrimary,
   },
   actionButtonIcon: {
     marginTop: 1,

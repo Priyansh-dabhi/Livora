@@ -42,7 +42,7 @@ import {
   clearProfile,
   clearTasksState,
 } from '@/store';
-import { saveProfile as mockSaveProfile } from '@/services/mockProfileService';
+import { useGetProfileQuery, useUpdateProfileMutation } from '@/services/userApi';
 import { saveProfileData, clearSession } from '@/utils/storage';
 
 export default function ProfileScreen() {
@@ -50,13 +50,23 @@ export default function ProfileScreen() {
   const dispatch = useAppDispatch();
   const currentProfile = useAppSelector((state) => state.profile.profile);
   const user = useAppSelector((state) => state.auth.user);
-  const isLoading = useAppSelector((state) => state.profile.isLoading);
+
+  const { data: profileResponse, refetch: refetchProfile } = useGetProfileQuery();
+  const [updateProfile, { isLoading: isUpdatingProfile }] = useUpdateProfileMutation();
+  const isLoading = isUpdatingProfile;
 
   const [isEditing, setIsEditing] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
+  // Sync profile response with Redux store when fetched
+  useEffect(() => {
+    if (profileResponse?.data) {
+      dispatch(setProfile(profileResponse.data));
+    }
+  }, [profileResponse, dispatch]);
+
   const nameField = useFormField({
-    initialValue: currentProfile?.name || 'Priyansh Dabhi',
+    initialValue: currentProfile?.name || user?.name || '',
     validate: (val) => {
       if (!val.trim()) return 'Full name is required';
       if (!isValidName(val)) return 'Please enter a valid name (at least 2 letters)';
@@ -65,7 +75,7 @@ export default function ProfileScreen() {
   });
 
   const mobileField = useFormField({
-    initialValue: currentProfile?.mobileNumber || '9313975796',
+    initialValue: currentProfile?.mobileNumber || user?.phone || '',
     validate: (val) => {
       const cleaned = val.replace(/\s/g, '');
       if (!cleaned) return 'Mobile number is required';
@@ -77,9 +87,7 @@ export default function ProfileScreen() {
   });
 
   const addressField = useFormField({
-    initialValue:
-      currentProfile?.address ||
-      'Omkara Residency, Chhani Road, Vadodara',
+    initialValue: currentProfile?.address || '',
     validate: (val) => {
       if (!val.trim()) return 'Address is required';
       if (!isValidAddress(val)) {
@@ -114,8 +122,6 @@ export default function ProfileScreen() {
       return;
     }
 
-    dispatch(setProfileLoading(true));
-
     try {
       const payload = {
         name: nameField.value.trim(),
@@ -124,7 +130,8 @@ export default function ProfileScreen() {
         businessName: businessField.value.trim() || undefined,
       };
 
-      const updatedProfile = await mockSaveProfile(payload);
+      const result = await updateProfile(payload).unwrap();
+      const updatedProfile = result.data;
 
       dispatch(setProfile(updatedProfile));
       await saveProfileData(updatedProfile);
@@ -134,10 +141,10 @@ export default function ProfileScreen() {
         { text: 'OK' },
       ]);
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Failed to update profile.';
+      const msg =
+        (err as any)?.data?.message ||
+        (err instanceof Error ? err.message : 'Failed to update profile.');
       setFormError(msg);
-    } finally {
-      dispatch(setProfileLoading(false));
     }
   };
 
@@ -162,17 +169,18 @@ export default function ProfileScreen() {
     );
   };
 
-  const displayName = currentProfile?.name || nameField.value || 'Priyansh Dabhi';
-  const displayEmail = user?.email || 'test@livora.com';
-  const displayMobile = currentProfile?.mobileNumber || mobileField.value || '9313975796';
+  const displayName = currentProfile?.name || user?.name || nameField.value || user?.email?.split('@')[0] || 'Member';
+  const displayEmail = user?.email || (currentProfile as any)?.email || '';
+  const displayMobile = currentProfile?.mobileNumber || user?.phone || mobileField.value || 'Not provided';
   const displayAddress =
     currentProfile?.address ||
     addressField.value ||
-    'Omkara Residency, Chhani Road, Vadodara';
-  const displayBusiness = currentProfile?.businessName || businessField.value;
+    'No address provided yet';
+  const displayBusiness = currentProfile?.businessName || businessField.value || 'Not provided';
 
   const initials = displayName
     .split(' ')
+    .filter(Boolean)
     .map((n) => n[0])
     .slice(0, 2)
     .join('')
@@ -182,15 +190,9 @@ export default function ProfileScreen() {
     <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
       <Header
         title="Profile & Account"
-        showBack
-        onBack={() => {
-          if (router.canGoBack()) {
-            router.back();
-          } else {
-            router.push('/(main)/home');
-          }
-        }}
+        showBack={false}
       />
+
 
       <KeyboardAwareWrapper contentContainerStyle={styles.container}>
         {/* User Account Overview Card */}
@@ -284,7 +286,7 @@ export default function ProfileScreen() {
 
             <Input
               label="Full Name *"
-              placeholder="e.g. Priyansh Dabhi"
+              placeholder="Enter your full name"
               value={nameField.value}
               onChangeText={nameField.setValue}
               onBlur={nameField.onBlur}

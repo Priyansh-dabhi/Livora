@@ -36,8 +36,7 @@ import {
   toggleActivity,
   toggleHelpType,
 } from '@/store';
-import { SERVICE_CATEGORIES } from '@/constants/serviceCatalog';
-import { getCategories, getTasks } from '@/services/mockTaskService';
+import { SERVICE_CATEGORIES, ALL_FLATTENED_TASKS } from '@/constants/serviceCatalog';
 
 function getTimeOfDayGreeting(): string {
   const hour = new Date().getHours();
@@ -58,27 +57,20 @@ export default function HomeScreen() {
 
   // Pre-load categories and tasks if empty
   useEffect(() => {
-    async function loadData() {
-      if (categories.length > 0 && tasks.length > 0) return;
-      try {
-        const [cats, taskList] = await Promise.all([
-          getCategories(),
-          getTasks(),
-        ]);
-        dispatch(setCategories(cats));
-        dispatch(setTasks(taskList));
-      } catch (err) {
-        console.warn('Failed to load initial data:', err);
-      }
+    if (categories.length === 0) {
+      dispatch(setCategories(SERVICE_CATEGORIES));
     }
-    loadData();
+    if (tasks.length === 0) {
+      dispatch(setTasks(ALL_FLATTENED_TASKS));
+    }
   }, [categories.length, tasks.length, dispatch]);
 
   const greeting = getTimeOfDayGreeting();
   const firstName =
     profile?.name?.split(' ')[0] ||
+    user?.name?.split(' ')[0] ||
     user?.email?.split('@')[0] ||
-    'Priyansh';
+    '';
 
   // Navigate to all services screen with category opened
   const handleSelectCategory = (categoryId: string) => {
@@ -203,18 +195,25 @@ export default function HomeScreen() {
         >
           {/* Top Bar: Greeting & Profile Avatar */}
           <View style={styles.topBar}>
-            <Text style={styles.greetingTitle}>
-              {greeting}, {firstName}
-            </Text>
-            <TouchableOpacity
-              onPress={() => router.push('/(main)/profile')}
-              style={styles.profileIconButton}
-              accessibilityLabel="View profile"
-              accessibilityRole="button"
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-            >
-              <Feather name="user" size={24} color={colors.textPrimary} />
-            </TouchableOpacity>
+            <View style={styles.topBarLeft}>
+              <Text style={styles.greetingTitle}>
+                {greeting}, {firstName}
+              </Text>
+              {profile?.address ? (
+                <View style={styles.locationBadge}>
+                  <Feather
+                    name="map-pin"
+                    size={12}
+                    color={colors.primary}
+                    style={styles.locationBadgeIcon}
+                  />
+                  <Text style={styles.locationBadgeText} numberOfLines={1}>
+                    {profile.address.split(',')[0].trim()}
+                  </Text>
+                </View>
+              ) : null}
+            </View>
+
           </View>
 
           {/* Heading */}
@@ -493,7 +492,7 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#FAF9F7',
+    backgroundColor: colors.background,
   },
   container: {
     flex: 1,
@@ -511,11 +510,29 @@ const styles = StyleSheet.create({
     marginBottom: 24,
     paddingTop: 4,
   },
+  topBarLeft: {
+    flex: 1,
+    marginRight: 12,
+  },
   greetingTitle: {
     fontSize: 22,
     fontWeight: '700',
-    color: '#1A1D2B',
+    color: colors.textPrimary,
     letterSpacing: -0.3,
+  },
+  locationBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 4,
+    gap: 4,
+  },
+  locationBadgeIcon: {
+    marginTop: Platform.OS === 'android' ? 1 : 0,
+  },
+  locationBadgeText: {
+    fontSize: 13,
+    color: colors.textSecondary,
+    fontWeight: '500',
   },
   profileIconButton: {
     width: 40,
@@ -526,7 +543,7 @@ const styles = StyleSheet.create({
   mainHeading: {
     fontSize: 24,
     fontWeight: '700',
-    color: '#1A1D2B',
+    color: colors.textPrimary,
     letterSpacing: -0.4,
     marginBottom: 16,
   },
@@ -538,9 +555,9 @@ const styles = StyleSheet.create({
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: colors.border,
     borderRadius: 14,
     paddingHorizontal: 16,
     height: 52,
@@ -551,7 +568,7 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     fontSize: 15,
-    color: '#1A1D2B',
+    color: colors.textPrimary,
     paddingVertical: 0,
   },
   clearSearchBtn: {
@@ -559,9 +576,9 @@ const styles = StyleSheet.create({
   },
   searchResultsBox: {
     marginTop: 8,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: colors.border,
     borderRadius: 14,
     paddingVertical: 6,
     ...shadows.md,
@@ -573,7 +590,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     gap: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
+    borderBottomColor: colors.surfaceElevated,
   },
   searchResultIcon: {
     width: 28,
@@ -589,11 +606,11 @@ const styles = StyleSheet.create({
   searchResultTitle: {
     fontSize: 15,
     fontWeight: '600',
-    color: '#1A1D2B',
+    color: colors.textPrimary,
   },
   searchResultSubtitle: {
     fontSize: 12,
-    color: '#6B7280',
+    color: colors.textSecondary,
     marginTop: 2,
   },
   popularSection: {
@@ -602,7 +619,7 @@ const styles = StyleSheet.create({
   sectionHeaderLabel: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#6B7280',
+    color: colors.textSecondary,
     letterSpacing: 0.8,
     textTransform: 'uppercase',
     marginBottom: 16,
@@ -616,9 +633,9 @@ const styles = StyleSheet.create({
   pill: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: colors.border,
     borderRadius: 9999,
     paddingHorizontal: 16,
     paddingVertical: 12,
@@ -629,21 +646,21 @@ const styles = StyleSheet.create({
   pillText: {
     fontSize: 15,
     fontWeight: '600',
-    color: '#1A1D2B',
+    color: colors.textPrimary,
   },
   comingSoonPillTag: {
-    backgroundColor: '#FEF3C7',
+    backgroundColor: colors.warningLight,
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 6,
     marginLeft: 6,
     borderWidth: 1,
-    borderColor: '#FDE68A',
+    borderColor: colors.warning,
   },
   comingSoonPillTagText: {
     fontSize: 10,
     fontWeight: '700',
-    color: '#92400E',
+    color: colors.textPrimary,
     letterSpacing: 0.2,
   },
   browseAllLink: {
@@ -682,12 +699,12 @@ const styles = StyleSheet.create({
   stepTitle: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#1A1D2B',
+    color: colors.textPrimary,
     marginBottom: 2,
   },
   stepSubtitle: {
     fontSize: 14,
-    color: '#6B7280',
+    color: colors.textSecondary,
     lineHeight: 20,
   },
   lmCardContainer: {
@@ -698,9 +715,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: colors.border,
     borderRadius: 16,
     paddingHorizontal: 18,
     paddingVertical: 14,
@@ -711,13 +728,13 @@ const styles = StyleSheet.create({
   },
   lmLabel: {
     fontSize: 12,
-    color: '#6B7280',
+    color: colors.textSecondary,
     marginBottom: 2,
   },
   lmName: {
     fontSize: 17,
     fontWeight: '700',
-    color: '#1A1D2B',
+    color: colors.textPrimary,
   },
   chatButton: {
     flexDirection: 'row',

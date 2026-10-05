@@ -22,6 +22,8 @@ declare global {
         email: string;
         name?: string | null;
         phone?: string | null;
+        address?: string | null;
+        businessName?: string | null;
       };
     }
   }

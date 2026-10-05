@@ -5,9 +5,11 @@
 export interface User {
   id: string;
   email: string;
+  name?: string | null;
+  phone?: string | null;
   isVerified: boolean;
   isProfileComplete: boolean;
-  createdAt: string;
+  createdAt?: string;
 }
 
 export interface AuthState {
@@ -24,9 +26,15 @@ export interface RegisterPayload {
   confirmPassword: string;
 }
 
-export interface LoginPayload {
+export interface LoginRequestPayload {
   email: string;
-  password: string;
+  phone?: string;
+}
+
+export interface LoginVerifyPayload {
+  email: string;
+  phone?: string;
+  otp: string;
 }
 
 export interface OtpPayload {

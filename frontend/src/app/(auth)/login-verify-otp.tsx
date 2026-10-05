@@ -1,8 +1,7 @@
 /**
- * Verify Email Screen
+ * Login Verify OTP Screen
  *
- * OTP verification with countdown timer, resend cooldown, attempts limit,
- * demo autofill, and redirection.
+ * Handles user login step 2: Verifying the OTP and saving session.
  */
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -27,27 +26,32 @@ import { colors, spacing, typography, radius } from '@/theme';
 import { useCountdown } from '@/hooks';
 import {
   useAppDispatch,
-  useAppSelector,
-  verifyEmailSuccess,
   loginSuccess,
+  setProfile,
+  setSelectedTaskIds,
 } from '@/store';
 import {
-  useVerifyEmailMutation,
-  useResendEmailOtpMutation,
+  useVerifyLoginOtpMutation,
+  useRequestLoginOtpMutation,
 } from '@/services/authApi';
+import {
+  saveSession,
+  saveProfileData,
+  getProfileData,
+  getSelectedTaskIds,
+} from '@/utils/storage';
 import {
   OTP_VALIDITY_SECONDS,
   OTP_RESEND_COOLDOWN_SECONDS,
   MAX_OTP_ATTEMPTS,
 } from '@/constants';
-import { formatCountdown, extractErrorMessage, saveSession } from '@/utils';
+import { formatCountdown, extractErrorMessage } from '@/utils';
 
-export default function VerifyEmailScreen() {
+export default function LoginVerifyOtpScreen() {
   const router = useRouter();
   const dispatch = useAppDispatch();
-  const params = useLocalSearchParams<{ email?: string }>();
-  const user = useAppSelector((state) => state.auth.user);
-  const targetEmail = params.email || user?.email || 'you@example.com';
+  const params = useLocalSearchParams<{ email: string }>();
+  const email = params.email || '';
 
   const [otp, setOtp] = useState('');
   const [attemptsRemaining, setAttemptsRemaining] = useState(MAX_OTP_ATTEMPTS);
@@ -55,8 +59,8 @@ export default function VerifyEmailScreen() {
   const [successNotice, setSuccessNotice] = useState<string | null>(null);
   const [hasError, setHasError] = useState(false);
 
-  const [verifyEmail, { isLoading: isVerifying }] = useVerifyEmailMutation();
-  const [resendOtp, { isLoading: isResending }] = useResendEmailOtpMutation();
+  const [verifyLoginOtp, { isLoading: isVerifying }] = useVerifyLoginOtpMutation();
+  const [requestOtp, { isLoading: isResending }] = useRequestLoginOtpMutation();
 
   // 10-minute validity countdown
   const validityCountdown = useCountdown();
@@ -100,45 +104,62 @@ export default function VerifyEmailScreen() {
       setHasError(false);
 
       try {
-        const response = await verifyEmail({
-          email: targetEmail,
+        const response = await verifyLoginOtp({
+          email,
           otp: code,
         }).unwrap();
 
+        // 1. Save Token + User
         const userObj = {
           id: response.data.user.id,
           email: response.data.user.email,
           name: response.data.user.name,
           phone: response.data.user.phone,
           isVerified: response.data.user.isVerified ?? true,
-          isProfileComplete: response.data.user.isProfileComplete ?? false,
+          isProfileComplete: response.data.user.isProfileComplete ?? Boolean(response.data.user.name),
           createdAt: response.data.user.createdAt ?? new Date().toISOString(),
         };
         await saveSession(response.data.token, userObj);
 
+        // 2. Dispatch to Redux
         dispatch(loginSuccess({ user: userObj, token: response.data.token }));
-        setSuccessNotice('Email verified successfully!');
 
-        // Delay slightly for user feedback, then redirect to profile-details
-        setTimeout(() => {
-          router.replace('/(onboarding)/profile-details');
-        }, 800);
-      } catch (err: any) {
-        console.error('[Verify Email Error]:', err);
-        const message = extractErrorMessage(err, 'Verification failed');
-
-        if (message.toLowerCase().includes('already verified')) {
-          dispatch(verifyEmailSuccess());
-          setSuccessNotice('Email is already verified! Redirecting to login...');
-          setTimeout(() => {
-            router.replace({
-              pathname: '/(auth)/login',
-              params: { verifiedEmail: targetEmail },
-            });
-          }, 800);
-          return;
+        // 3. Hydrate profile from backend if user already has completed profile
+        if (response.data.user.name && response.data.user.phone) {
+          const profileFromUser = {
+            id: response.data.user.id,
+            userId: response.data.user.id,
+            name: response.data.user.name,
+            mobileNumber: response.data.user.phone,
+            address: (response.data.user as any).address || '',
+            businessName: (response.data.user as any).businessName || undefined,
+            createdAt: response.data.user.createdAt || new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          };
+          dispatch(setProfile(profileFromUser));
+          await saveProfileData(profileFromUser);
+        } else {
+          // Hydrate local state if available (from past usage)
+          const storedProfile = await getProfileData();
+          if (storedProfile) {
+            dispatch(setProfile(storedProfile));
+          }
         }
 
+        const storedTasks = await getSelectedTaskIds();
+        if (storedTasks.length > 0) {
+          dispatch(setSelectedTaskIds(storedTasks));
+        }
+
+        // 4. Redirect: new users fill profile details, returning users go to Home
+        if (!userObj.isProfileComplete && !response.data.user.name) {
+          router.replace('/(onboarding)/profile-details');
+        } else {
+          router.replace('/(main)/home');
+        }
+      } catch (err: any) {
+        console.error('[Verify Login OTP Error]:', err);
+        const message = extractErrorMessage(err, 'Verification failed');
         const newAttempts = attemptsRemaining - 1;
         setAttemptsRemaining(newAttempts);
         setHasError(true);
@@ -150,7 +171,7 @@ export default function VerifyEmailScreen() {
         }
       }
     },
-    [otp, isExpired, attemptsRemaining, targetEmail, dispatch, router, verifyEmail],
+    [otp, isExpired, attemptsRemaining, email, dispatch, router, verifyLoginOtp],
   );
 
   const handleOtpChange = (newOtp: string) => {
@@ -176,13 +197,13 @@ export default function VerifyEmailScreen() {
     setOtp('');
 
     try {
-      await resendOtp({ email: targetEmail }).unwrap();
+      await requestOtp({ email }).unwrap();
       setAttemptsRemaining(MAX_OTP_ATTEMPTS);
       validityCountdown.start(OTP_VALIDITY_SECONDS);
       resendCooldown.start(OTP_RESEND_COOLDOWN_SECONDS);
-      setSuccessNotice('A new verification code has been sent.');
+      setSuccessNotice('A new login code has been sent.');
     } catch (err: any) {
-      console.error('[Resend Email OTP Error]:', err);
+      console.error('[Resend Login OTP Error]:', err);
       const message = extractErrorMessage(err, 'Could not resend code');
       Alert.alert('Resend Failed', message);
     }
@@ -193,13 +214,13 @@ export default function VerifyEmailScreen() {
       <Header
         showBack
         onBack={() => router.back()}
-        title="Email Verification"
+        title="Login Code"
       />
       <KeyboardAwareWrapper contentContainerStyle={styles.container}>
         {/* Visual Badge */}
         <View style={styles.iconContainer}>
           <View style={styles.iconCircle}>
-            <Feather name="mail" size={32} color={colors.primary} />
+            <Feather name="lock" size={32} color={colors.primary} />
           </View>
         </View>
 
@@ -207,10 +228,10 @@ export default function VerifyEmailScreen() {
         <View style={styles.textContainer}>
           <Text style={styles.title}>Check your inbox</Text>
           <Text style={styles.subtitle}>
-            We've sent a 6-digit verification code to
+            We've sent a 6-digit login code to
           </Text>
           <View style={styles.emailChip}>
-            <Text style={styles.emailText}>{targetEmail}</Text>
+            <Text style={styles.emailText}>{email}</Text>
           </View>
         </View>
 
@@ -276,7 +297,7 @@ export default function VerifyEmailScreen() {
 
         {/* Submit Button */}
         <Button
-          label="Verify & Continue"
+          label="Verify Code & Sign In"
           onPress={() => handleVerify()}
           loading={isVerifying}
           disabled={otp.length !== 6 || isBlocked}
@@ -406,6 +427,10 @@ const styles = StyleSheet.create({
   timerTextExpired: {
     color: colors.error,
   },
+  verifyButton: {
+    width: '100%',
+    marginBottom: spacing.xl,
+  },
   demoHint: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -424,10 +449,6 @@ const styles = StyleSheet.create({
   },
   demoBold: {
     fontWeight: '700',
-  },
-  verifyButton: {
-    width: '100%',
-    marginBottom: spacing.xl,
   },
   resendContainer: {
     alignItems: 'center',
