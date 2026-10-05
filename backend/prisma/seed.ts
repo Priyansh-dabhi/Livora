@@ -127,6 +127,38 @@ const CATALOGUE_DATA = [
       },
     ],
   },
+  {
+    slug: 'cat-travel',
+    name: 'Travel & Tourism',
+    icon: 'map-pin',
+    description: 'Flights, hotels, visas, transfers, and custom vacation itineraries',
+    tasks: [
+      {
+        name: 'Flight & train ticket booking',
+        description: 'Best routes, seat selection, and meal preferences',
+      },
+      {
+        name: 'Hotel, resort & private villa booking',
+        description: 'Curated luxury stays with negotiated member perks',
+      },
+      {
+        name: 'Tourist visa application & embassy paperwork',
+        description: 'VFS appointments, document verification, and cover letters',
+      },
+      {
+        name: 'Travel insurance & forex card arrangement',
+        description: 'Medical coverage policies and multi-currency debit cards',
+      },
+      {
+        name: 'Airport pickup & chauffeur coordination',
+        description: 'Punctual airport transfers with meet-and-greet',
+      },
+      {
+        name: 'Intercity cab booking & local sightseeing',
+        description: 'Well-maintained vehicles with verified drivers',
+      },
+    ],
+  },
 ];
 
 async function main() {

@@ -459,19 +459,22 @@ export default function RequestsScreen() {
           <View style={styles.modalOverlay}>
             <View style={styles.modalCard}>
               <View style={styles.modalHeader}>
-                <View>
+                <View style={styles.modalHeaderTitleWrap}>
                   <Text style={styles.modalTitle}>Request Timeline</Text>
-                  <Text style={styles.modalSubtitle}>
-                    #{selectedTimelineRequest.id} •{' '}
+                  <Text style={styles.modalSubtitle} numberOfLines={1} ellipsizeMode="middle">
+                    #{selectedTimelineRequest.id.slice(0, 8).toUpperCase()} •{' '}
                     {selectedTimelineRequest.categoryName}
                   </Text>
                 </View>
                 <TouchableOpacity
                   onPress={() => setSelectedTimelineRequest(null)}
                   style={styles.modalCloseButton}
+                  activeOpacity={0.7}
                   hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  accessibilityLabel="Close timeline modal"
+                  accessibilityRole="button"
                 >
-                  <Feather name="x" size={20} color={colors.textPrimary} />
+                  <Feather name="x" size={18} color={colors.textPrimary} />
                 </TouchableOpacity>
               </View>
 
@@ -983,11 +986,15 @@ const styles = StyleSheet.create({
   modalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     marginBottom: 20,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
-    paddingBottom: 12,
+    paddingBottom: 14,
+  },
+  modalHeaderTitleWrap: {
+    flex: 1,
+    marginRight: 12,
   },
   modalTitle: {
     fontSize: 18,
@@ -1000,7 +1007,12 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   modalCloseButton: {
-    padding: 4,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: colors.surfaceElevated,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   timelineFlow: {
     paddingLeft: 6,

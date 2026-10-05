@@ -44,14 +44,15 @@ Livora/
 ├── backend/
 │   ├── prisma/
 │   │   ├── migrations/             # Database migration history
-│   │   └── schema.prisma           # Prisma schema (User, OtpChallenge, ServiceRequest)
+│   │   ├── schema.prisma           # Prisma schema (User, OtpChallenge, ServiceRequest, Category, Task)
+│   │   └── seed.ts                 # Database seed script (5 categories, 29 tasks)
 │   ├── src/
 │   │   ├── config/                 # Environment config
-│   │   ├── controllers/            # Route handlers (auth, user, request, health)
+│   │   ├── controllers/            # Route handlers (auth, user, task, request, health)
 │   │   ├── lib/                    # Prisma client singleton
 │   │   ├── middlewares/            # Auth, validation, logging, and error handlers
 │   │   ├── routes/                 # Express API routes
-│   │   ├── services/               # Business logic (auth, email, otp, user, request)
+│   │   ├── services/               # Business logic (auth, email, otp, user, task, request)
 │   │   ├── types/                  # TypeScript interface definitions
 │   │   ├── utils/                  # JWT, password hashing, and API response utilities
 │   │   ├── validators/             # Zod validation schemas
@@ -71,7 +72,7 @@ Livora/
 │   │   ├── components/             # Reusable UI components (Button, Input, Card, Header, etc.)
 │   │   ├── constants/              # Service catalog and app configuration
 │   │   ├── hooks/                  # Form field and custom utility hooks
-│   │   ├── services/               # RTK Query API slices (authApi, userApi, requestsApi)
+│   │   ├── services/               # RTK Query API slices (authApi, userApi, tasksApi, requestsApi)
 │   │   ├── store/                  # Redux store and slices (auth, profile, tasks)
 │   │   ├── theme/                  # Alexandria design tokens (colors, typography, spacing, radius)
 │   │   ├── types/                  # Client-side domain types
@@ -80,6 +81,8 @@ Livora/
 │   ├── package.json
 │   └── tsconfig.json
 │
+├── docker-compose.yml              # One-command PostgreSQL & Mailpit container setup
+├── DESIGN.md                       # Architecture & design document
 └── README.md                       # Project documentation
 ```
 
@@ -233,7 +236,7 @@ npm test
 | `POST` | `/api/v1/auth/login/verify-otp` | Verify login OTP & obtain JWT | No |
 | `GET` | `/api/v1/users/profile` | Retrieve the authenticated user's profile | Yes |
 | `PUT` | `/api/v1/users/profile` | Update user profile details (name, phone, address) | Yes |
-| `GET` | `/api/v1/tasks` | Get all tasks catalogue (23+ seeded tasks across 4 categories) | No |
+| `GET` | `/api/v1/tasks` | Get all tasks catalogue (29+ seeded tasks across 5 categories) | No |
 | `GET` | `/api/v1/tasks/categories` | Get categories with nested tasks | No |
 | `POST` | `/api/v1/tasks/select` | Save user's selected tasks | Yes |
 | `GET` | `/api/v1/tasks/selected` | Retrieve tasks picked by the user | Yes |

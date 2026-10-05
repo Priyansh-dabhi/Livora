@@ -65,9 +65,15 @@ export default function HomeScreen() {
   );
 
   const activeUserRequests = useMemo(() => {
-    return (requestsResponse?.data || []).filter(
+    const list = (requestsResponse?.data || []).filter(
       (r) => r.status === 'in_progress' || r.status === 'pending'
     );
+    // Sort latest first (by createdAt descending)
+    return [...list].sort((a, b) => {
+      const timeA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const timeB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      return timeB - timeA;
+    });
   }, [requestsResponse]);
 
   // Pre-load categories and tasks if empty
@@ -291,7 +297,7 @@ export default function HomeScreen() {
             )}
           </View>
 
-          {/* Section: YOUR SELECTED TASKS */}
+          {/* Section: YOUR SELECTED TASKS - Only show the single latest task card */}
           {activeUserRequests.length > 0 && (
             <View style={styles.selectedTasksSection}>
               <View style={styles.selectedHeaderRow}>
@@ -306,9 +312,9 @@ export default function HomeScreen() {
                 </TouchableOpacity>
               </View>
 
-              {activeUserRequests.slice(0, 3).map((req) => (
+              {activeUserRequests[0] && (
                 <TouchableOpacity
-                  key={req.id}
+                  key={activeUserRequests[0].id}
                   style={styles.selectedTaskCard}
                   activeOpacity={0.8}
                   onPress={() => router.push('/(main)/requests')}
@@ -316,7 +322,7 @@ export default function HomeScreen() {
                   <View style={styles.selectedTaskIconWrap}>
                     <Feather
                       name={
-                        (req.categoryIcon as keyof typeof Feather.glyphMap) ||
+                        (activeUserRequests[0].categoryIcon as keyof typeof Feather.glyphMap) ||
                         'clipboard'
                       }
                       size={18}
@@ -325,19 +331,19 @@ export default function HomeScreen() {
                   </View>
                   <View style={styles.selectedTaskInfo}>
                     <Text style={styles.selectedTaskTitle}>
-                      {req.categoryName}
+                      {activeUserRequests[0].categoryName}
                     </Text>
                     <Text style={styles.selectedTaskActivities} numberOfLines={1}>
-                      {req.activities.join(' • ')}
+                      {activeUserRequests[0].activities.join(' • ')}
                     </Text>
                   </View>
                   <View style={styles.selectedTaskStatusBadge}>
                     <Text style={styles.selectedTaskStatusText}>
-                      {req.status === 'in_progress' ? 'In Progress' : 'Pending'}
+                      {activeUserRequests[0].status === 'in_progress' ? 'In Progress' : 'Pending'}
                     </Text>
                   </View>
                 </TouchableOpacity>
-              ))}
+              )}
             </View>
           )}
 
@@ -392,9 +398,6 @@ export default function HomeScreen() {
                   style={styles.pillIcon}
                 />
                 <Text style={styles.pillText}>Travel & Tourism</Text>
-                <View style={styles.comingSoonPillTag}>
-                  <Text style={styles.comingSoonPillTagText}>Soon</Text>
-                </View>
               </TouchableOpacity>
             </View>
 
@@ -412,9 +415,6 @@ export default function HomeScreen() {
                   style={styles.pillIcon}
                 />
                 <Text style={styles.pillText}>Health & Medical</Text>
-                <View style={styles.comingSoonPillTag}>
-                  <Text style={styles.comingSoonPillTagText}>Soon</Text>
-                </View>
               </TouchableOpacity>
 
               <TouchableOpacity
@@ -429,9 +429,6 @@ export default function HomeScreen() {
                   style={styles.pillIcon}
                 />
                 <Text style={styles.pillText}>Senior Care</Text>
-                <View style={styles.comingSoonPillTag}>
-                  <Text style={styles.comingSoonPillTagText}>Soon</Text>
-                </View>
               </TouchableOpacity>
             </View>
 
