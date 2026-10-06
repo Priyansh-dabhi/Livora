@@ -161,7 +161,7 @@ Livora/
    Create a `.env` file in `frontend/`:
    ```env
    # Replace with your local machine's IP address (e.g. 192.168.1.100) or emulator loopback
-   EXPO_PUBLIC_API_URL=http://192.168.29.222:5000/api/v1
+   EXPO_PUBLIC_API_URL=http://192.168.1.100:5000/api/v1
    ```
 
 4. Start the Expo development server:
