@@ -160,8 +160,11 @@ Livora/
 3. Configure environment variables:
    Create a `.env` file in `frontend/`:
    ```env
-   # Replace with your local machine's IP address (e.g. 192.168.1.100) or emulator loopback
-   EXPO_PUBLIC_API_URL=http://192.168.1.100:5000/api/v1
+   # Option A: Local Wi-Fi / Emulator Loopback
+   # EXPO_PUBLIC_API_URL=http://192.168.1.100:5000/api/v1
+
+   # Option B: Ngrok Tunnel (Recommended for Physical Device & Release Builds)
+   EXPO_PUBLIC_API_URL=https://your-ngrok-subdomain.ngrok-free.dev/api/v1
    ```
 
 4. Start the Expo development server:
@@ -177,17 +180,58 @@ Livora/
 
 ---
 
-## 📱 Building the Android Release APK
+## 📱 Building & Testing the Android Release APK
 
 Livora is configured for native Android release builds with full Hermes Ahead-Of-Time (AOT) compilation and local cleartext traffic support.
 
-### Run Release on a Connected Device / Emulator
+### 🌐 Physical Device Testing with Ngrok (Recommended for Reviewers)
+
+When testing a standalone native release build (`--variant release`) on a physical device, the phone runs as an independent client and cannot reach your PC's `http://localhost:5000`. Using **ngrok** creates a secure public HTTPS tunnel so your phone connects directly to your local backend from any network (Wi-Fi or mobile data).
+
+#### Step 1: Start the Local Backend
+Make sure PostgreSQL is running via Docker, then start the Express server:
+```bash
+docker compose up -d
+cd backend
+npm run dev
+```
+*(The backend will be live on `http://localhost:5000`)*
+
+#### Step 2: Start the Ngrok Tunnel
+Open a separate terminal window and expose port `5000`:
+```bash
+ngrok http 5000
+```
+
+#### Step 3: Copy the Forwarding URL
+In the ngrok terminal window, locate the `Forwarding` line:
+```text
+Session Status     online
+Account            Your Name (Plan: Free)
+Forwarding         https://abc1-23-45-67.ngrok-free.dev -> http://localhost:5000
+```
+Copy the **`https://`** URL (e.g. `https://abc1-23-45-67.ngrok-free.dev`).
+
+#### Step 4: Paste the URL into `frontend/.env`
+Open `frontend/.env` in your editor and set `EXPO_PUBLIC_API_URL` to your copied ngrok URL with `/api/v1` appended:
+```env
+EXPO_PUBLIC_API_URL=https://abc1-23-45-67.ngrok-free.dev/api/v1
+```
+
+> **Reviewer Note**: Free ngrok endpoints normally show an interstitial warning page in browsers. The Livora mobile app already includes `ngrok-skip-browser-warning: true` in its API headers ([api.ts](frontend/src/services/api.ts)), so all API calls seamlessly bypass the warning and receive pure JSON responses.
+
+#### Step 5: Install & Run Release on your Phone
+Connect your Android phone via USB (with **USB Debugging** enabled in Developer Options) and run:
 ```bash
 cd frontend
 npx expo run:android --variant release
 ```
+Expo will build the native release bundle, install it directly onto your connected device, and launch the app connected to your live backend.
 
-### Generate Standalone `.apk` File
+---
+
+### Standalone `.apk` Generation
+To export a standalone installable `.apk` file without running directly:
 ```bash
 cd frontend
 npx expo prebuild --platform android
