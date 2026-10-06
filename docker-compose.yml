@@ -10,7 +10,7 @@ services:
     ports:
       - "5432:5432"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - livora_pgdata:/var/lib/postgresql/data
 
   mailpit:
     image: axllent/mailpit:latest
@@ -23,4 +23,6 @@ services:
       MP_MAX_MESSAGES: 500
 
 volumes:
-  postgres_data:
+  livora_pgdata:
+    name: backend_livora_pgdata
+    external: true
