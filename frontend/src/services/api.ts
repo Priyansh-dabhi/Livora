@@ -55,6 +55,8 @@ const rawBaseQuery = fetchBaseQuery({
     } catch (error) {
       console.warn('Error reading token from SecureStore:', error);
     }
+    headers.set('ngrok-skip-browser-warning', 'true');
+    headers.set('Accept', 'application/json');
     return headers;
   },
 });
